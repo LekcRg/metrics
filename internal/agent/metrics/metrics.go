@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand/v2"
 	"net/http"
@@ -13,7 +12,7 @@ var pollCountUrl = "http://localhost:8080/update/counter/PollCount/1"
 var countSent = 0
 
 func postRequest(url string) {
-	_, err := http.Post(url, "text/plain", bytes.NewBuffer([]byte("")))
+	_, err := http.Post(url, "text/plain", nil)
 	if err != nil {
 		fmt.Printf("Url: %s\nError making http request: %s\n\n", url, err)
 	}

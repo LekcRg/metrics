@@ -1,7 +1,6 @@
 package update
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -34,7 +33,6 @@ func New(db database) http.HandlerFunc {
 		}
 
 		contentType := r.Header.Get("Content-type")
-		// remove / from start and end
 		strippedPath := strings.TrimSuffix(r.URL.Path[1:], "/")
 		parsedPath := strings.Split(strippedPath, "/")
 
@@ -44,7 +42,11 @@ func New(db database) http.HandlerFunc {
 		}
 
 		if len(parsedPath) < 4 {
-			http.Error(w, "Incorrect url", http.StatusNotFound)
+			if len(parsedPath) == 2 {
+				http.Error(w, "Not found 404", http.StatusNotFound)
+			} else {
+				http.Error(w, "Bad request 400", http.StatusBadRequest)
+			}
 			return
 		}
 
@@ -52,7 +54,21 @@ func New(db database) http.HandlerFunc {
 		reqName := parsedPath[2]
 		reqValue := parsedPath[3]
 
-		if reqType != "counter" && reqType != "gauge" {
+		if reqType == "counter" {
+			value, err := strconv.ParseInt(reqValue, 0, 64)
+			if err != nil {
+				sendErrorValue(w, err, "int64")
+				return
+			}
+			db.UpdateCounter(reqName, storage.Counter(value))
+		} else if reqType == "gauge" {
+			value, err := strconv.ParseFloat(reqValue, 64)
+			if err != nil {
+				sendErrorValue(w, err, "float64")
+				return
+			}
+			db.UpdateGauge(reqName, storage.Gauge(value))
+		} else {
 			http.Error(
 				w,
 				"Bad request: incorrect type. The type must be a counter or a gauge",
@@ -61,55 +77,8 @@ func New(db database) http.HandlerFunc {
 			return
 		}
 
-		var (
-			jsonRes []byte
-			jsonErr error
-		)
-
-		if reqType == "counter" {
-			value, err := strconv.ParseInt(reqValue, 0, 64)
-			if err != nil {
-				sendErrorValue(w, err, "int64")
-				return
-			}
-			// storage.CounterCollection[reqName] += counter(value)
-			res, err := db.UpdateCounter(reqName, storage.Counter(value))
-			if err != nil {
-				http.Error(
-					w,
-					"Internal error",
-					http.StatusInternalServerError,
-				)
-			}
-			jsonRes, jsonErr = json.Marshal(res)
-		} else if reqType == "gauge" {
-			value, err := strconv.ParseFloat(reqValue, 64)
-			if err != nil {
-				sendErrorValue(w, err, "float64")
-				return
-			}
-			// storage.GaugeCollection[reqName] = gauge(value)
-			res, err := db.UpdateGauge(reqName, storage.Gauge(value))
-			if err != nil {
-				http.Error(
-					w,
-					"Internal error",
-					http.StatusInternalServerError,
-				)
-			}
-			jsonRes, jsonErr = json.Marshal(res)
-		}
-
-		if jsonErr != nil {
-			http.Error(
-				w,
-				"can't provide a json. internal error",
-				http.StatusInternalServerError,
-			)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		w.Write(jsonRes)
+		w.Write([]byte("success"))
 	}
 }

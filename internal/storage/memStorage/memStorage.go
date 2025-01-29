@@ -1,6 +1,10 @@
 package memStorage
 
-import "github.com/LekcRg/metrics/internal/storage"
+import (
+	"errors"
+
+	"github.com/LekcRg/metrics/internal/storage"
+)
 
 type MemStorage struct {
 	db *storage.Database
@@ -35,6 +39,22 @@ func (s *MemStorage) GetAllCounter() (storage.CounterCollection, error) {
 func (s *MemStorage) GetAllGouge() (storage.GaugeCollection, error) {
 	collection := s.db.Gauge
 	return collection, nil
+}
+
+func (s *MemStorage) GetGaugeByName(name string) (storage.Gauge, error) {
+	if val, ok := s.db.Gauge[name]; ok {
+		return val, nil
+	} else {
+		return 0, errors.New("not found")
+	}
+}
+
+func (s *MemStorage) GetCounterByName(name string) (storage.Counter, error) {
+	if val, ok := s.db.Counter[name]; ok {
+		return val, nil
+	} else {
+		return 0, errors.New("not found")
+	}
 }
 
 func (s *MemStorage) GetAll() (storage.Database, error) {
