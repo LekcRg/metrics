@@ -2,8 +2,7 @@ package memStorage
 
 import (
 	"errors"
-
-	"github.com/LekcRg/metrics/internal/storage"
+	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
 type MemStorage struct {

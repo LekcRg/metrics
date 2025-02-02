@@ -31,7 +31,7 @@ func getRandomUrl() string {
 }
 
 func StartSending(monitor *map[string]float64, interval int) {
-	time.Sleep(time.Duration(interval) * time.Second)
+	// time.Sleep(time.Duration(interval) * time.Second)
 
 	for {
 		for key, value := range *monitor {

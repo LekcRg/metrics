@@ -1,11 +1,11 @@
 package main
 
 import (
+	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
 	"net/http"
 	"os"
 
-	"github.com/LekcRg/metrics/internal/http-server/handlers/update"
-	"github.com/LekcRg/metrics/internal/storage/memStorage"
+	"github.com/LekcRg/metrics/internal/server/router"
 )
 
 func main() {
@@ -13,9 +13,6 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/update/", update.New(storage))
-
-	http.ListenAndServe(":8080", mux)
+	router := router.NewRouter(storage)
+	http.ListenAndServe(":8080", router)
 }

@@ -1,19 +1,24 @@
-package update
+package router
 
 import (
-	"fmt"
+	"github.com/LekcRg/metrics/internal/server/storage"
+	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/storage"
-	"github.com/LekcRg/metrics/internal/storage/memStorage"
-	"github.com/likexian/gokit/assert"
+	"github.com/go-chi/chi/v5"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var updateStorage, _ = memStorage.New()
+func TestUpdateRoutes(t *testing.T) {
+	updateStorage, _ := memStorage.New()
+	r := chi.NewRouter()
+	ts := httptest.NewServer(UpdateRoutes(r, updateStorage))
+	defer ts.Close()
 
-func TestNew(t *testing.T) {
 	type wantDb struct {
 		vType string
 		name  string
@@ -26,9 +31,10 @@ func TestNew(t *testing.T) {
 		db          wantDb
 	}
 	tests := []struct {
-		name string
-		url  string
-		want want
+		name        string
+		url         string
+		contentType string
+		want        want
 	}{
 		// TODO: Add test cases.
 		{
@@ -181,21 +187,35 @@ func TestNew(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "#13 Negative request with wrong content-type",
+			url:         "/update/integer/eleven/2025",
+			contentType: "multipart/form-data",
+			want: want{
+				code:        http.StatusBadRequest,
+				contentType: "text/plain; charset=utf-8",
+				db: wantDb{
+					check: false,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, tt.url, nil)
-			req.Header.Add("Content-Type", "text/plain")
+			req, err := http.NewRequest(http.MethodPost, ts.URL+tt.url, nil)
+			require.NoError(t, err)
 
-			w := httptest.NewRecorder()
-			handler := http.HandlerFunc(New(updateStorage))
-			handler(w, req)
+			if tt.contentType != "" {
+				req.Header.Add("Content-Type", tt.contentType)
+			} else {
+				req.Header.Add("Content-Type", "text/plain")
+			}
 
-			res := w.Result()
-			fmt.Println(tt.want.code)
+			resp, err := ts.Client().Do(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.code, resp.StatusCode)
+			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
 
-			assert.Equal(t, res.StatusCode, tt.want.code)
-			assert.Equal(t, res.Header.Get("Content-Type"), tt.want.contentType)
 			if tt.want.db.check {
 				if tt.want.db.vType == "gauge" {
 					value, err := updateStorage.GetGaugeByName(tt.want.db.name)
