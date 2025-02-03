@@ -13,6 +13,7 @@ func postRequest(url string) {
 	resp, err := http.Post(url, "text/plain", nil)
 	if err != nil {
 		fmt.Printf("Url: %s\nError making http request: %s\n\n", url, err)
+		return
 	}
 	resp.Body.Close()
 }
