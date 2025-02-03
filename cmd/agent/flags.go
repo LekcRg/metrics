@@ -13,9 +13,9 @@ var pollInterval int
 var https bool
 
 type config struct {
-	Addr           *string `env:"ADDRESS,init"`
-	ReportInterval *int    `env:"REPORT_INTERVAL,init"`
-	PollInterval   *int    `env:"POLL_INTERVAL,init"`
+	Addr           string `env:"ADDRESS"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
+	PollInterval   int    `env:"POLL_INTERVAL"`
 }
 
 func parseFlags() {
@@ -33,15 +33,20 @@ func parseFlags() {
 		fmt.Println("Error parse env")
 	}
 
-	if cfg.Addr != nil {
-		addrFlag = *cfg.Addr
+	if cfg.Addr != "" {
+		addrFlag = cfg.Addr
 	}
 
-	if cfg.ReportInterval != nil {
-		reportInterval = *cfg.ReportInterval
+	if cfg.ReportInterval != 0 {
+		reportInterval = cfg.ReportInterval
 	}
 
-	if cfg.PollInterval != nil {
-		pollInterval = *cfg.ReportInterval
+	if cfg.PollInterval != 0 {
+		pollInterval = cfg.ReportInterval
 	}
+
+	fmt.Printf("addr: %s\n", addrFlag)
+	fmt.Printf("reportInterval: %d\n", reportInterval)
+	fmt.Printf("pollInterval: %d\n", pollInterval)
+	// fmt.Printf("https: %b\n", https)
 }
