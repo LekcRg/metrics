@@ -59,7 +59,7 @@ func generateHTMLListItem(name string, value string) string {
 </li>`, name, value)
 }
 
-func generateHtmlList(gaugeList []string, counterList []string) string {
+func generateHTMLList(gaugeList []string, counterList []string) string {
 	HTMLList := fmt.Sprintf(`<li class="main-list__item">
 	<h2 class="main_list__title">Gauge</h2>
 	<ul class="sub-list">
@@ -75,10 +75,10 @@ func generateHtmlList(gaugeList []string, counterList []string) string {
 	return HTMLList
 }
 
-func generateHtml(gaugeList []string, counterList []string) string {
-	list := generateHtmlList(gaugeList, counterList)
-	HTML := fmt.Sprintf(`<!DOCTYPE HTML>
-<HTML lang="en">
+func generateHTML(gaugeList []string, counterList []string) string {
+	list := generateHTMLList(gaugeList, counterList)
+	HTML := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -93,7 +93,7 @@ func generateHtml(gaugeList []string, counterList []string) string {
 		</ul>
 	</main>
 </body>
-</HTML>`, styles, list)
+</html>`, styles, list)
 
 	return HTML
 }
@@ -120,7 +120,7 @@ func Get(db database) http.HandlerFunc {
 				generateHTMLListItem(key, fmt.Sprintf("%d", value)))
 		}
 
-		result := generateHtml(gaugeList, counterList)
+		result := generateHTML(gaugeList, counterList)
 		w.Header().Add("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
 		io.WriteString(w, result)
