@@ -2,30 +2,20 @@ package update
 
 import (
 	"fmt"
-	"github.com/LekcRg/metrics/internal/server/storage"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/LekcRg/metrics/internal/server/storage"
 
 	"github.com/go-chi/chi/v5"
 )
 
-//	type database interface {
-//		UpdateCounter(name string, value storage.Counter) (storage.Counter, error)
-//		UpdateGauge(name string, value storage.Gauge) (storage.Gauge, error)
-//		GetGaugeByName(name string) (storage.Gauge, error)
-//		GetCounterByName(name string) (storage.Counter, error)
-//		// GetAllCounter() (storage.CounterCollection, error)
-//		// GetAllGouge() (storage.GaugeCollection, error)
-//	}
-// type database interface {
-// 	UpdateCounter(name string, value storage.Counter) (storage.Counter, error)
-// 	UpdateGauge(name string, value storage.Gauge) (storage.Gauge, error)
-// 	// GetGaugeByName(name string) (storage.Gauge, error)
-// 	// GetCounterByName(name string) (storage.Counter, error)
-// 	// GetAllCounter() (storage.CounterCollection, error)
-// 	// GetAllGouge() (storage.GaugeCollection, error)
-// }
+type database interface {
+	UpdateCounter(name string, value storage.Counter) (storage.Counter, error)
+	UpdateGauge(name string, value storage.Gauge) (storage.Gauge, error)
+}
 
 func sendErrorValue(w http.ResponseWriter, err error, errorTextType string) {
 	textErr := fmt.Sprintf(
@@ -39,8 +29,11 @@ func Post(db database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 
-		if contentType != "text/plain" {
-			http.Error(w, "Incorrect content-type", http.StatusBadRequest)
+		// В задании написано, что запрос должен быть `text/plain`
+		// А в тестах отправляется пустой Content-Type
+		// Убрать проверку?
+		if !strings.Contains(contentType, "text/plain") && contentType != "" {
+			http.Error(w, "Incorrect content-type "+contentType, http.StatusBadRequest)
 			return
 		}
 

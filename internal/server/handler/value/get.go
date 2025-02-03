@@ -1,23 +1,20 @@
-package update
+package value
 
 import (
 	"fmt"
-	"github.com/LekcRg/metrics/internal/server/storage"
 	"io"
 	"net/http"
 	"strconv"
 
+	"github.com/LekcRg/metrics/internal/server/storage"
+
 	"github.com/go-chi/chi/v5"
 )
 
-// type database interface {
-// 	GetGaugeByName(name string) (storage.Gauge, error)
-// 	GetCounterByName(name string) (storage.Counter, error)
-// 	// UpdateCounter(name string, value storage.Counter) (storage.Counter, error)
-// 	// UpdateGauge(name string, value storage.Gauge) (storage.Gauge, error)
-// 	// GetAllCounter() (storage.CounterCollection, error)
-// 	// GetAllGouge() (storage.GaugeCollection, error)
-// }
+type database interface {
+	GetGaugeByName(name string) (storage.Gauge, error)
+	GetCounterByName(name string) (storage.Counter, error)
+}
 
 func Get(db database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

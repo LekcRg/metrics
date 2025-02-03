@@ -1,12 +1,13 @@
-package handler
+package home
 
 import (
 	"fmt"
-	"github.com/LekcRg/metrics/internal/server/storage"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
 var styles = `<style>
@@ -101,7 +102,7 @@ type database interface {
 	GetAll() (storage.Database, error)
 }
 
-func HomeGet(db database) http.HandlerFunc {
+func Get(db database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		all, err := db.GetAll()
 		if err != nil {

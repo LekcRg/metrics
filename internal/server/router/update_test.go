@@ -1,11 +1,12 @@
 package router
 
 import (
-	"github.com/LekcRg/metrics/internal/server/storage"
-	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/LekcRg/metrics/internal/server/storage"
+	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,7 +17,8 @@ import (
 func TestUpdateRoutes(t *testing.T) {
 	updateStorage, _ := memStorage.New()
 	r := chi.NewRouter()
-	ts := httptest.NewServer(UpdateRoutes(r, updateStorage))
+	UpdateRoutes(r, updateStorage)
+	ts := httptest.NewServer(r)
 	defer ts.Close()
 
 	type wantDb struct {
