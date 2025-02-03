@@ -16,35 +16,35 @@ func postRequest(url string) {
 	}
 }
 
-func sendMetric(mType string, name string, value string, baseUrl string) {
+func sendMetric(mType string, name string, value string, baseURL string) {
 	countSent++
-	url := fmt.Sprintf(`%s/%s/%s/%s`, baseUrl, mType, name, value)
+	url := fmt.Sprintf(`%s/%s/%s/%s`, baseURL, mType, name, value)
 	postRequest(url)
 }
 
-func getRandomUrl() string {
+func getRandomURL() string {
 	randomValueLeft := rand.IntN(99999)
 	randomValueRight := rand.IntN(999)
 	return fmt.Sprintf("%d.%d", randomValueLeft, randomValueRight)
 }
 
 func StartSending(monitor *map[string]float64, interval int, addr string, https bool) {
-	baseUrl := addr + "/update"
+	baseURL := addr + "/update"
 	if https {
-		baseUrl = "https://" + baseUrl
+		baseURL = "https://" + baseURL
 	} else {
-		baseUrl = "http://" + baseUrl
+		baseURL = "http://" + baseURL
 	}
 
-	pollCountUrl := baseUrl + "/counter/PollCount/1"
+	pollCountURL := baseURL + "/counter/PollCount/1"
 	for {
 		for key, value := range *monitor {
-			url := fmt.Sprintf(`%s/gauge/%s/%f`, baseUrl, key, value)
+			url := fmt.Sprintf(`%s/gauge/%s/%f`, baseURL, key, value)
 			postRequest(url)
-			postRequest(pollCountUrl)
+			postRequest(pollCountURL)
 		}
 
-		sendMetric("gauge", "RandomValue", getRandomUrl(), baseUrl)
+		sendMetric("gauge", "RandomValue", getRandomURL(), baseURL)
 		fmt.Printf("%d time sent\n", countSent)
 		time.Sleep(time.Duration(interval) * time.Second)
 	}

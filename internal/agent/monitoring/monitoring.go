@@ -1,4 +1,4 @@
-package runtimeMonitoring
+package monitoring
 
 import (
 	"runtime"

@@ -52,7 +52,7 @@ var styles = `<style>
 	}
 </style>`
 
-func generateHtmlListItem(name string, value string) string {
+func generateHTMLListItem(name string, value string) string {
 	return fmt.Sprintf(`<li class="sub-list__item">
 	<div class="sub-list__name">%s:</div>
 	<div class="sub-list__value">%s</div>
@@ -60,7 +60,7 @@ func generateHtmlListItem(name string, value string) string {
 }
 
 func generateHtmlList(gaugeList []string, counterList []string) string {
-	htmlList := fmt.Sprintf(`<li class="main-list__item">
+	HTMLList := fmt.Sprintf(`<li class="main-list__item">
 	<h2 class="main_list__title">Gauge</h2>
 	<ul class="sub-list">
 		%s
@@ -72,13 +72,13 @@ func generateHtmlList(gaugeList []string, counterList []string) string {
 		%s
 	</ul>
 </li>`, strings.Join(gaugeList, "\n"), strings.Join(counterList, "\n"))
-	return htmlList
+	return HTMLList
 }
 
 func generateHtml(gaugeList []string, counterList []string) string {
 	list := generateHtmlList(gaugeList, counterList)
-	html := fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
+	HTML := fmt.Sprintf(`<!DOCTYPE HTML>
+<HTML lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -93,9 +93,9 @@ func generateHtml(gaugeList []string, counterList []string) string {
 		</ul>
 	</main>
 </body>
-</html>`, styles, list)
+</HTML>`, styles, list)
 
-	return html
+	return HTML
 }
 
 type database interface {
@@ -112,12 +112,12 @@ func Get(db database) http.HandlerFunc {
 		counterList := []string{}
 		for key, value := range all.Gauge {
 			gaugeList = append(gaugeList,
-				generateHtmlListItem(key, strconv.FormatFloat(float64(value), 'f', -1, 64)))
+				generateHTMLListItem(key, strconv.FormatFloat(float64(value), 'f', -1, 64)))
 		}
 
 		for key, value := range all.Counter {
 			counterList = append(counterList,
-				generateHtmlListItem(key, fmt.Sprintf("%d", value)))
+				generateHTMLListItem(key, fmt.Sprintf("%d", value)))
 		}
 
 		result := generateHtml(gaugeList, counterList)
