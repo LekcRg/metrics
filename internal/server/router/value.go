@@ -8,10 +8,7 @@ import (
 
 func ValueRotes(r chi.Router, storage *memStorage.MemStorage) {
 	r.Route("/value", func(r chi.Router) {
-		// r.Post("/", err.ErrorBadRequest)
 		r.Route("/{type}", func(r chi.Router) {
-			// r.Post("/", http.NotFound)
-			// r.Post("/{name}", err.ErrorBadRequest)
 			r.Get("/{name}", value.Get(storage))
 		})
 	})
