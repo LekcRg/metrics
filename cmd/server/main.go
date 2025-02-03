@@ -4,14 +4,14 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
+	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 
 	"github.com/LekcRg/metrics/internal/server/router"
 )
 
 func main() {
 	parseFlags()
-	storage, err := memStorage.New()
+	storage, err := memstorage.New()
 	if err != nil {
 		os.Exit(1)
 	}

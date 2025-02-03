@@ -10,10 +10,11 @@ import (
 var countSent = 0
 
 func postRequest(url string) {
-	_, err := http.Post(url, "text/plain", nil)
+	resp, err := http.Post(url, "text/plain", nil)
 	if err != nil {
 		fmt.Printf("Url: %s\nError making http request: %s\n\n", url, err)
 	}
+	resp.Body.Close()
 }
 
 func sendMetric(mType string, name string, value string, baseURL string) {

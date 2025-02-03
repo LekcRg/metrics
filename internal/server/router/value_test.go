@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/server/storage"
-	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
+	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,7 +16,7 @@ import (
 )
 
 func TestValueRotes(t *testing.T) {
-	valueStorage, _ := memStorage.New()
+	valueStorage, _ := memstorage.New()
 	r := chi.NewRouter()
 	ValueRotes(r, valueStorage)
 	ts := httptest.NewServer(r)

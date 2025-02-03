@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
+	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 
 	"github.com/go-chi/chi/v5"
 
@@ -14,7 +14,7 @@ import (
 )
 
 func TestUpdateRoutes(t *testing.T) {
-	updateStorage, _ := memStorage.New()
+	updateStorage, _ := memstorage.New()
 	r := chi.NewRouter()
 	UpdateRoutes(r, updateStorage)
 	ts := httptest.NewServer(r)
@@ -136,6 +136,7 @@ func TestUpdateRoutes(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			resp.Body.Close()
 		})
 	}
 }

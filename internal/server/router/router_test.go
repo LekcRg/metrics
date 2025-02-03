@@ -5,14 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/server/storage/memStorage"
+	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewRouter(t *testing.T) {
 
-	routerStorage, _ := memStorage.New()
+	routerStorage, _ := memstorage.New()
 	r := NewRouter(routerStorage)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -45,6 +45,7 @@ func TestNewRouter(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			resp.Body.Close()
 		})
 	}
 
