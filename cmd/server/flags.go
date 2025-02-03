@@ -27,6 +27,4 @@ func parseFlags() {
 	if cfg.Addr != "" {
 		addrFlag = cfg.Addr
 	}
-
-	fmt.Printf("addr: %s\n", addrFlag)
 }

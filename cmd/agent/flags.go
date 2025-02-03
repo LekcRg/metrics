@@ -44,9 +44,4 @@ func parseFlags() {
 	if cfg.PollInterval != 0 {
 		pollInterval = cfg.ReportInterval
 	}
-
-	fmt.Printf("addr: %s\n", addrFlag)
-	fmt.Printf("reportInterval: %d\n", reportInterval)
-	fmt.Printf("pollInterval: %d\n", pollInterval)
-	// fmt.Printf("https: %b\n", https)
 }
