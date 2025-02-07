@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-var countSent = 0
-
 func postRequest(url string) {
 	resp, err := http.Post(url, "text/plain", nil)
 	if err != nil {
@@ -18,8 +16,8 @@ func postRequest(url string) {
 	resp.Body.Close()
 }
 
-func sendMetric(mType string, name string, value string, baseURL string) {
-	countSent++
+func sendMetric(mType string, name string, value string, baseURL string, countSent *int) {
+	*countSent++
 	url := fmt.Sprintf(`%s/%s/%s/%s`, baseURL, mType, name, value)
 	postRequest(url)
 }
@@ -38,6 +36,7 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 		baseURL = "http://" + baseURL
 	}
 
+	countSent := 0
 	pollCountURL := baseURL + "/counter/PollCount/1"
 	for {
 		for key, value := range *monitor {
@@ -46,7 +45,7 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 			postRequest(pollCountURL)
 		}
 
-		sendMetric("gauge", "RandomValue", getRandomURL(), baseURL)
+		sendMetric("gauge", "RandomValue", getRandomURL(), baseURL, &countSent)
 		fmt.Printf("%d time sent\n", countSent)
 		time.Sleep(time.Duration(interval) * time.Second)
 	}

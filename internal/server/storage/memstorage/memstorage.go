@@ -2,6 +2,7 @@ package memstorage
 
 import (
 	"errors"
+
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
@@ -51,9 +52,9 @@ func (s *MemStorage) GetGaugeByName(name string) (storage.Gauge, error) {
 func (s *MemStorage) GetCounterByName(name string) (storage.Counter, error) {
 	if val, ok := s.db.Counter[name]; ok {
 		return val, nil
-	} else {
-		return 0, errors.New("not found")
 	}
+
+	return 0, errors.New("not found")
 }
 
 func (s *MemStorage) GetAll() (storage.Database, error) {

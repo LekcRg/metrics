@@ -18,11 +18,16 @@ type config struct {
 	PollInterval   int    `env:"POLL_INTERVAL"`
 }
 
+const defaultAddr = "localhost:8080"
+const defaultReportInterval = 10
+const defaultPollInterval = 2
+const defaultHTTPS = false
+
 func parseFlags() {
-	flag.StringVar(&addrFlag, "a", "localhost:8080", "server address")
-	flag.IntVar(&reportInterval, "r", 10, "interval for sending runtime metrics")
-	flag.IntVar(&pollInterval, "p", 2, "interval for getting runtime metrics")
-	flag.BoolVar(&https, "s", false, "https true/false, default false")
+	flag.StringVar(&addrFlag, "a", defaultAddr, "server address")
+	flag.IntVar(&reportInterval, "r", defaultReportInterval, "interval for sending runtime metrics")
+	flag.IntVar(&pollInterval, "p", defaultPollInterval, "interval for getting runtime metrics")
+	flag.BoolVar(&https, "s", defaultHTTPS, "https true/false, default false")
 
 	flag.Parse()
 
@@ -42,6 +47,6 @@ func parseFlags() {
 	}
 
 	if cfg.PollInterval != 0 {
-		pollInterval = cfg.ReportInterval
+		pollInterval = cfg.PollInterval
 	}
 }

@@ -13,8 +13,10 @@ type config struct {
 	Addr string `env:"ADDRESS"`
 }
 
+const defaultAddr = "localhost:8080"
+
 func parseFlags() {
-	flag.StringVar(&addrFlag, "a", "localhost:8080", "address for run server")
+	flag.StringVar(&addrFlag, "a", defaultAddr, "address for run server")
 	flag.Parse()
 
 	var cfg config
