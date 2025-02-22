@@ -44,9 +44,9 @@ func (s *MemStorage) GetAllGouge() (storage.GaugeCollection, error) {
 func (s *MemStorage) GetGaugeByName(name string) (storage.Gauge, error) {
 	if val, ok := s.db.Gauge[name]; ok {
 		return val, nil
-	} else {
-		return 0, errors.New("not found")
 	}
+
+	return 0, errors.New("not found")
 }
 
 func (s *MemStorage) GetCounterByName(name string) (storage.Counter, error) {

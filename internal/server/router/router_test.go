@@ -5,15 +5,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/server/services"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewRouter(t *testing.T) {
-
 	routerStorage, _ := memstorage.New()
-	r := NewRouter(routerStorage)
+	updateService := services.NewMetricsService(routerStorage)
+	r := NewRouter(updateService)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 

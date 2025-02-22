@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/server/storage"
+	"github.com/LekcRg/metrics/internal/server/services"
 )
 
 var styles = `<style>
@@ -98,13 +98,9 @@ func generateHTML(gaugeList []string, counterList []string) string {
 	return HTML
 }
 
-type database interface {
-	GetAll() (storage.Database, error)
-}
-
-func Get(db database) http.HandlerFunc {
+func Get(s services.MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		all, err := db.GetAll()
+		all, err := s.GetAllMetrics()
 		if err != nil {
 			http.Error(w, "Internal error 500", http.StatusInternalServerError)
 		}

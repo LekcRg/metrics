@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/server/services"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 
@@ -15,10 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValueRotes(t *testing.T) {
+func TestValueRoutes(t *testing.T) {
 	valueStorage, _ := memstorage.New()
+	updateService := services.NewMetricsService(valueStorage)
 	r := chi.NewRouter()
-	ValueRotes(r, valueStorage)
+	ValueRoutes(r, updateService)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	valueStorage.UpdateGauge("one", storage.Gauge(123.45))

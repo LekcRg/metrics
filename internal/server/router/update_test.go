@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/server/services"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 
 	"github.com/go-chi/chi/v5"
@@ -15,8 +16,9 @@ import (
 
 func TestUpdateRoutes(t *testing.T) {
 	updateStorage, _ := memstorage.New()
+	updateService := services.NewMetricsService(updateStorage)
 	r := chi.NewRouter()
-	UpdateRoutes(r, updateStorage)
+	UpdateRoutes(r, updateService)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
