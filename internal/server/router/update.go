@@ -12,7 +12,7 @@ import (
 
 func UpdateRoutes(r chi.Router, metricService services.MetricService) {
 	r.Route("/update", func(r chi.Router) {
-		r.Post("/", err.ErrorBadRequest)
+		r.Post("/", update.PostJSON(metricService))
 		r.Route("/{type}", func(r chi.Router) {
 			r.Post("/", http.NotFound)
 			r.Post("/{name}", err.ErrorBadRequest)

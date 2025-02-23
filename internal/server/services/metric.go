@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/LekcRg/metrics/internal/logger"
+	"github.com/LekcRg/metrics/internal/server/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
@@ -16,8 +18,10 @@ type database interface {
 }
 
 type MetricService interface {
+	UpdateMetricJSON(json models.Metrics) (models.Metrics, error)
 	UpdateMetric(reqType string, reqValue string, reqName string) error
 	GetMetric(reqName string, reqType string) (string, error)
+	GetMetricJSON(json models.Metrics) (models.Metrics, error)
 	GetAllMetrics() (storage.Database, error)
 }
 
@@ -32,7 +36,6 @@ func NewMetricsService(db database) MetricService {
 }
 
 func (s *metricService) UpdateMetric(reqName string, reqType string, reqValue string) error {
-	fmt.Println(reqType, reqValue, reqName)
 	if reqType == "counter" {
 		value, err := strconv.ParseInt(reqValue, 0, 64)
 		if err != nil {
@@ -50,6 +53,47 @@ func (s *metricService) UpdateMetric(reqName string, reqType string, reqValue st
 	}
 
 	return nil
+}
+
+func (s *metricService) UpdateMetricJSON(json models.Metrics) (models.Metrics, error) {
+	reqName := json.ID
+	reqType := json.MType
+	delta := json.Delta
+	value := json.Value
+	// var newDelta *storage.Counter
+	// var newValue *storage.Gauge
+
+	if reqType == "gauge" && value != nil {
+		s.db.UpdateGauge(reqName, storage.Gauge(*value))
+
+		newVal, err := s.db.GetGaugeByName(reqName)
+		if err != nil {
+			logger.Log.Error("error while getting new gauge value")
+			return models.Metrics{}, fmt.Errorf("can'not get new value")
+		}
+
+		return models.Metrics{
+			ID:    reqName,
+			MType: reqType,
+			Value: &newVal,
+		}, nil
+
+	} else if reqType == "counter" && delta != nil {
+		s.db.UpdateCounter(reqName, storage.Counter(*delta))
+
+		newVal, err := s.db.GetCounterByName(reqName)
+		if err != nil {
+			logger.Log.Error("error while getting new counter value")
+			return models.Metrics{}, fmt.Errorf("can'not get new value")
+		}
+
+		return models.Metrics{
+			ID:    reqName,
+			MType: reqType,
+			Delta: &newVal,
+		}, nil
+	}
+	return models.Metrics{}, fmt.Errorf("invalid type or empty value")
 }
 
 func (s *metricService) GetMetric(reqName string, reqType string) (string, error) {
@@ -73,6 +117,39 @@ func (s *metricService) GetMetric(reqName string, reqType string) (string, error
 	}
 
 	return resVal, nil
+}
+
+func (s *metricService) GetMetricJSON(json models.Metrics) (models.Metrics, error) {
+	reqType := json.MType
+	reqName := json.ID
+
+	if reqType == "counter" {
+		val, err := s.db.GetCounterByName(reqName)
+		if err != nil {
+			logger.Log.Error("error while getting counter value")
+			return models.Metrics{}, fmt.Errorf("can'not get new value")
+		}
+
+		return models.Metrics{
+			ID:    reqName,
+			MType: reqType,
+			Delta: &val,
+		}, nil
+	} else if reqType == "gauge" {
+		val, err := s.db.GetGaugeByName(reqName)
+		if err != nil {
+			logger.Log.Error("error while getting gauge value")
+			return models.Metrics{}, fmt.Errorf("can'not get new value")
+		}
+
+		return models.Metrics{
+			ID:    reqName,
+			MType: reqType,
+			Value: &val,
+		}, nil
+	}
+
+	return models.Metrics{}, fmt.Errorf("type is not valid")
 }
 
 func (s *metricService) GetAllMetrics() (storage.Database, error) {

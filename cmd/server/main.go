@@ -11,9 +11,9 @@ import (
 )
 
 func main() {
-	logger.Initialize(logLvl, isDev)
-
 	parseFlags()
+
+	logger.Initialize(logLvl, isDev)
 
 	logger.Log.Info("Create storage")
 	storage, err := memstorage.New()
