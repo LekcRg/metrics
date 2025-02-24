@@ -2,10 +2,10 @@ package services
 
 import (
 	"fmt"
+	"github.com/LekcRg/metrics/internal/models"
 	"strconv"
 
 	"github.com/LekcRg/metrics/internal/logger"
-	"github.com/LekcRg/metrics/internal/server/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 

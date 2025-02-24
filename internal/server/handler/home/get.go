@@ -108,7 +108,7 @@ func Get(s services.MetricService) http.HandlerFunc {
 		counterList := []string{}
 		for key, value := range all.Gauge {
 			gaugeList = append(gaugeList,
-				generateHTMLListItem(key, strconv.FormatFloat(float64(value), 'f', -1, 64)))
+				generateHTMLListItem(key, strconv.FormatFloat(float64(value), 'f', 3, 64)))
 		}
 
 		for key, value := range all.Counter {

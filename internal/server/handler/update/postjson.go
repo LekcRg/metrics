@@ -2,19 +2,18 @@ package update
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/LekcRg/metrics/internal/models"
+
 	"github.com/LekcRg/metrics/internal/logger"
-	"github.com/LekcRg/metrics/internal/server/models"
 	"github.com/LekcRg/metrics/internal/server/services"
 )
 
 func PostJSON(s services.MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Print("adslkjfalskdjf")
 		contentType := r.Header.Get("Content-type")
 
 		if !strings.Contains(contentType, "application/json") && contentType != "" {
@@ -37,7 +36,6 @@ func PostJSON(s services.MetricService) http.HandlerFunc {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		fmt.Printf("%+v\n", parsedBody)
 
 		newMetric, err := s.UpdateMetricJSON(parsedBody)
 		if err != nil {

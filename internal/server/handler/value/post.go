@@ -2,11 +2,11 @@ package value
 
 import (
 	"encoding/json"
+	"github.com/LekcRg/metrics/internal/models"
 	"io"
 	"net/http"
 
 	"github.com/LekcRg/metrics/internal/logger"
-	"github.com/LekcRg/metrics/internal/server/models"
 	"github.com/LekcRg/metrics/internal/server/services"
 )
 
