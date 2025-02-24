@@ -11,7 +11,10 @@ import (
 func NewRouter(metricService services.MetricService) chi.Router {
 	r := chi.NewRouter()
 	r.Use(logger.RequestLogger)
+
+	// or just use middleware by NYTimes
 	r.Use(cgzip.GzipHandle)
+
 	r.Get("/", home.Get(metricService))
 	UpdateRoutes(r, metricService)
 	ValueRoutes(r, metricService)

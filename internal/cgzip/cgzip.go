@@ -2,15 +2,23 @@ package cgzip
 
 import (
 	"compress/gzip"
-	"io"
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 )
+
+var gzwrPool = &sync.Pool{
+	New: func() interface{} {
+		w, _ := gzip.NewWriterLevel(nil, gzip.BestSpeed)
+		return w
+	},
+}
 
 type (
 	gzipWriter struct {
 		http.ResponseWriter
+		Writer     *gzip.Writer
 		headerData *headerData
 	}
 
@@ -20,33 +28,42 @@ type (
 )
 
 var toGzip = []string{
-	"application/javascript",
 	"application/json",
-	"text/css",
 	"text/html",
-	"text/plain",
-	"text/xml",
+	// "application/javascript",
+	// "text/css",
+	// "text/plain",
+	// "text/xml",
 }
 
 func (w gzipWriter) Write(b []byte) (int, error) {
 	contentType := w.Header().Get("Content-Type")
+	if w.headerData.statusCode == 0 {
+		w.headerData.statusCode = http.StatusOK
+	}
 
-	if !slices.Contains(toGzip, contentType) || w.headerData.statusCode > 299 {
-		w.WriteHeader(w.headerData.statusCode)
+	// TODO: Add check for the content-type with utf-8, etc.
+	if !slices.Contains(toGzip, contentType) ||
+		w.headerData.statusCode > 299 ||
+		len(b) < 1400 {
+		w.ResponseWriter.WriteHeader(w.headerData.statusCode)
 		return w.ResponseWriter.Write(b)
 	}
 
-	gz, err := gzip.NewWriterLevel(w.ResponseWriter, gzip.BestSpeed)
-	if err != nil {
-		io.WriteString(w, err.Error())
-	}
-	defer gz.Close()
-
+	gzw := gzwrPool.Get().(*gzip.Writer)
+	gzw.Reset(w.ResponseWriter)
+	w.Writer = gzw
 	w.Header().Add("Content-Encoding", "gzip")
+	w.Header().Del("Content-Length")
 	if w.headerData.statusCode > 0 {
 		w.ResponseWriter.WriteHeader(w.headerData.statusCode)
 	}
-	return gz.Write(b)
+
+	defer func() {
+		w.Writer.Close()
+		gzwrPool.Put(w.Writer)
+	}()
+	return w.Writer.Write(b)
 }
 
 func (w gzipWriter) WriteHeader(statusCode int) {
@@ -61,7 +78,11 @@ func GzipHandle(next http.Handler) http.Handler {
 		}
 
 		headerData := &headerData{statusCode: 0}
+		gzwr := gzipWriter{
+			ResponseWriter: w,
+			headerData:     headerData,
+		}
 
-		next.ServeHTTP(gzipWriter{ResponseWriter: w, headerData: headerData}, r)
+		next.ServeHTTP(gzwr, r)
 	})
 }
