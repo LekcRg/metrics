@@ -37,6 +37,7 @@ func parseFlags() {
 	flag.IntVar(&storeInterval, "i", defaultStoreInterval, "time is seconds to save db to store(file)")
 	flag.StringVar(&fileStoragePath, "f", defaultFileStoragePath, "path to save store")
 	flag.BoolVar(&restore, "r", defaultRestore, "restore db from file")
+	flag.Parse()
 
 	var cfg config
 	err := env.Parse(&cfg)
