@@ -12,6 +12,7 @@
 *.out
 
 # Binaries
+tmp
 cmd/agent/main
 cmd/agent/agent
 cmd/server/main
