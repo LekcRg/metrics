@@ -60,3 +60,17 @@ func (s *MemStorage) GetCounterByName(name string) (storage.Counter, error) {
 func (s *MemStorage) GetAll() (storage.Database, error) {
 	return *s.db, nil
 }
+
+func (s *MemStorage) SaveManyGauge(gauges storage.GaugeCollection) error {
+	for key, item := range gauges {
+		s.db.Gauge[key] = item
+	}
+	return nil
+}
+
+func (s *MemStorage) SaveManyCounter(counters storage.CounterCollection) error {
+	for key, item := range counters {
+		s.db.Counter[key] = item
+	}
+	return nil
+}

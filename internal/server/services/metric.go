@@ -2,8 +2,9 @@ package services
 
 import (
 	"fmt"
-	"github.com/LekcRg/metrics/internal/models"
 	"strconv"
+
+	"github.com/LekcRg/metrics/internal/models"
 
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -15,6 +16,8 @@ type database interface {
 	GetGaugeByName(name string) (storage.Gauge, error)
 	GetCounterByName(name string) (storage.Counter, error)
 	GetAll() (storage.Database, error)
+	SaveManyGauge(storage.GaugeCollection) error
+	SaveManyCounter(storage.CounterCollection) error
 }
 
 type MetricService interface {
@@ -23,6 +26,7 @@ type MetricService interface {
 	GetMetric(reqName string, reqType string) (string, error)
 	GetMetricJSON(json models.Metrics) (models.Metrics, error)
 	GetAllMetrics() (storage.Database, error)
+	SaveFromFile(storage.Database) error
 }
 
 type metricService struct {
@@ -159,4 +163,22 @@ func (s *metricService) GetAllMetrics() (storage.Database, error) {
 	}
 
 	return all, nil
+}
+
+func (s *metricService) SaveFromFile(file storage.Database) error {
+	if len(file.Gauge) > 0 {
+		err := s.db.SaveManyGauge(file.Gauge)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(file.Counter) > 0 {
+		err := s.db.SaveManyCounter(file.Counter)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
