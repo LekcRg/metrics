@@ -1,26 +1,37 @@
 package metrics
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/LekcRg/metrics/internal/cgzip"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-func postRequest(url string, body io.Reader) {
-	resp, err := http.Post(url, "application/json", body)
+func postRequest(url string, body []byte) {
+	req, err := cgzip.GetGzippedReq(url, body)
+	if err != nil {
+		logger.Log.Error("Error while geting gzipped request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		logger.Log.Error("Error making http request")
 		return
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		logger.Log.Warn("Server answered with status code: " + strconv.Itoa(resp.StatusCode))
+	}
 }
 
 func sendMetric(
@@ -39,7 +50,7 @@ func sendMetric(
 		fmt.Println()
 	}
 
-	postRequest(baseURL, bytes.NewBuffer(jsonBody))
+	postRequest(baseURL, jsonBody)
 }
 
 func getRandomValue() storage.Gauge {
@@ -58,6 +69,8 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 	}
 
 	countSent := 0
+	randomVal := getRandomValue()
+	sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
 	for {
 		countSent++
 		for key, value := range *monitor {
@@ -69,7 +82,7 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 
 		randomVal := getRandomValue()
 		sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
-		fmt.Printf("%d time sent\n", countSent)
+		logger.Log.Info(strconv.Itoa(countSent) + " time sent")
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }

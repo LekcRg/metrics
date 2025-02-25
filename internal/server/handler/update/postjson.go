@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/models"
-
 	"github.com/LekcRg/metrics/internal/logger"
+	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/services"
 )
 

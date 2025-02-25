@@ -14,6 +14,7 @@ func NewRouter(metricService services.MetricService) chi.Router {
 
 	// or just use middleware by NYTimes
 	r.Use(cgzip.GzipHandle)
+	r.Use(cgzip.GzipBody)
 
 	r.Get("/", home.Get(metricService))
 	UpdateRoutes(r, metricService)

@@ -24,7 +24,7 @@ const defaultIsDev = false
 func parseFlags() {
 	flag.StringVar(&addrFlag, "a", defaultAddr, "address for run server")
 	flag.StringVar(&logLvl, "l", defaultLogLvl, "logging level")
-	flag.BoolVar(&isDev, "dev", defaultIsDev, "logging level")
+	flag.BoolVar(&isDev, "dev", defaultIsDev, "is development")
 	flag.Parse()
 
 	var cfg config

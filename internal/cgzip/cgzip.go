@@ -1,11 +1,14 @@
 package cgzip
 
 import (
+	"bytes"
 	"compress/gzip"
 	"net/http"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/LekcRg/metrics/internal/logger"
 )
 
 var gzwrPool = &sync.Pool{
@@ -43,9 +46,9 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 	}
 
 	// TODO: Add check for the content-type with utf-8, etc.
+	// Can check len(b) < 1400
 	if !slices.Contains(toGzip, contentType) ||
-		w.headerData.statusCode > 299 ||
-		len(b) < 1400 {
+		w.headerData.statusCode > 299 {
 		w.ResponseWriter.WriteHeader(w.headerData.statusCode)
 		return w.ResponseWriter.Write(b)
 	}
@@ -85,4 +88,48 @@ func GzipHandle(next http.Handler) http.Handler {
 
 		next.ServeHTTP(gzwr, r)
 	})
+}
+
+func GzipBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				logger.Log.Error("Error while create gzip reader")
+			}
+
+			r.Body = gz
+			defer gz.Close()
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// add context in the future, idk why)
+func GetGzippedReq(url string, body []byte) (*http.Request, error) {
+	var buf bytes.Buffer
+	gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
+	if err != nil {
+		logger.Log.Error("Error creating gzip writer")
+		return nil, err
+	}
+	_, err = gz.Write(body)
+	if err != nil {
+		logger.Log.Error("Error writing to gzip writer")
+		return nil, err
+	}
+	err = gz.Close()
+	if err != nil {
+		logger.Log.Error("Error closing gzip writer")
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, &buf)
+	if err != nil {
+		logger.Log.Error("Error creating http request")
+		return nil, err
+	}
+	req.Header.Set("Content-Encoding", "gzip")
+	return req, nil
 }
