@@ -2,7 +2,6 @@ package store
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
@@ -11,40 +10,36 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-// type store struct {
-// 	filename string
-// 	interval int
-// 	restore  bool
-// }
+func Save(s services.MetricService, filename string) {
+	metrics, err := s.GetAllMetrics()
+	if err != nil {
+		logger.Log.Error("Error while getting all metrics from storage")
+	}
+
+	storeJSON, err := json.Marshal(metrics)
+	if err != nil {
+		logger.Log.Error("Error while marshal json store")
+	}
+
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		logger.Log.Fatal(err.Error())
+	}
+
+	_, err = file.Write(storeJSON)
+	if err != nil {
+		logger.Log.Error("Error while saving file")
+	}
+	file.Close()
+
+	logger.Log.Info("Success save store to file " + filename)
+}
 
 func StartSaving(s services.MetricService, interval int, filename string) {
 	for {
 		time.Sleep(time.Duration(interval) * time.Second)
 
-		metrics, err := s.GetAllMetrics()
-		if err != nil {
-			logger.Log.Error("Error while getting all metrics from storage")
-		}
-		fmt.Printf("%+v\n", metrics)
-		logger.Log.Info("Saving...")
-
-		storeJSON, err := json.Marshal(metrics)
-		if err != nil {
-			logger.Log.Error("Error while marshal json store")
-		}
-
-		file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			logger.Log.Fatal(err.Error())
-		}
-
-		_, err = file.Write(storeJSON)
-		if err != nil {
-			logger.Log.Error("Error while saving file")
-		}
-		file.Close()
-
-		logger.Log.Info("Success save store to file " + filename)
+		Save(s, filename)
 	}
 }
 

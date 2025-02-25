@@ -2,7 +2,10 @@ package main
 
 import (
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/server/services"
@@ -38,6 +41,22 @@ func main() {
 	wg.Add(1)
 	go store.StartSaving(updateService, storeInterval, fileStoragePath)
 
-	err = http.ListenAndServe(addrFlag, router)
+	server := &http.Server{
+		Addr:    addrFlag,
+		Handler: router,
+	}
+
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+
+		store.Save(updateService, fileStoragePath)
+		if err := server.Close(); err != nil {
+			logger.Log.Fatal("HTTP close error")
+		}
+	}()
+
+	err = server.ListenAndServe()
 	logger.Log.Fatal(err.Error())
 }
