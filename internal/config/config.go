@@ -18,27 +18,14 @@ const defaultReportInterval = 10
 const defaultPollInterval = 2
 const defaultHTTPS = false
 
-// TODO: File with testData
-var TestServerConfig = ServerConfig{
-	commonConfig: commonConfig{
-		Addr:   defaultAddr,
-		LogLvl: defaultLogLvl,
-		IsDev:  defaultIsDev,
-	},
-	StoreInterval:   defaultStoreInterval,
-	FileStoragePath: defaultFileStoragePath,
-	Restore:         defaultRestore,
-	SyncSave:        false,
-}
-
-type commonConfig struct {
+type CommonConfig struct {
 	Addr   string `env:"ADDRESS"`
 	LogLvl string `env:"LOG_LVL"`
 	IsDev  bool   `env:"IS_DEV"`
 }
 
 type ServerConfig struct {
-	commonConfig
+	CommonConfig
 	StoreInterval   int    `env:"STORE_INTERVAL" envDefault:"-1"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
@@ -46,19 +33,19 @@ type ServerConfig struct {
 }
 
 type AgentConfig struct {
-	commonConfig
+	CommonConfig
 	ReportInterval int  `env:"REPORT_INTERVAL"`
 	PollInterval   int  `env:"POLL_INTERVAL"`
-	IsHttps        bool `env:"IS_HTTPS"`
+	IsHTTPS        bool `env:"IS_HTTPS"`
 }
 
-func loadCommonCfg(cfg *commonConfig) error {
+func loadCommonCfg(cfg *CommonConfig) error {
 	flag.StringVar(&cfg.Addr, "a", defaultAddr, "address for run server")
 	flag.StringVar(&cfg.LogLvl, "l", defaultLogLvl, "logging level")
 	flag.BoolVar(&cfg.IsDev, "dev", defaultIsDev, "is development")
 	flag.Parse()
 
-	var envVars commonConfig
+	var envVars CommonConfig
 	err := env.Parse(&envVars)
 	if err != nil {
 		return err
@@ -83,7 +70,7 @@ func LoadServerCfg() ServerConfig {
 	flag.IntVar(&cfg.StoreInterval, "i", defaultStoreInterval, "time is seconds to save db to store(file)")
 	flag.StringVar(&cfg.FileStoragePath, "f", defaultFileStoragePath, "path to save store")
 	flag.BoolVar(&cfg.Restore, "r", defaultRestore, "restore db from file")
-	err := loadCommonCfg(&cfg.commonConfig)
+	err := loadCommonCfg(&cfg.CommonConfig)
 	if err != nil {
 		logger.Log.Error("Error while load common config")
 	}
@@ -122,8 +109,8 @@ func LoadAgentCfg() AgentConfig {
 
 	flag.IntVar(&cfg.ReportInterval, "r", defaultReportInterval, "interval for sending runtime metrics")
 	flag.IntVar(&cfg.PollInterval, "p", defaultPollInterval, "interval for getting runtime metrics")
-	flag.BoolVar(&cfg.IsHttps, "s", defaultHTTPS, "https true/false, default false")
-	err := loadCommonCfg(&cfg.commonConfig)
+	flag.BoolVar(&cfg.IsHTTPS, "s", defaultHTTPS, "https true/false, default false")
+	err := loadCommonCfg(&cfg.CommonConfig)
 	if err != nil {
 		logger.Log.Error("Error while load common config")
 	}
@@ -143,8 +130,8 @@ func LoadAgentCfg() AgentConfig {
 		cfg.PollInterval = envVars.PollInterval
 	}
 
-	if envVars.IsHttps {
-		cfg.IsHttps = envVars.IsHttps
+	if envVars.IsHTTPS {
+		cfg.IsHTTPS = envVars.IsHTTPS
 	}
 
 	cfgString := fmt.Sprintf("%+v\n", cfg)

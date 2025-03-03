@@ -6,11 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/server/services/metric"
 	"github.com/LekcRg/metrics/internal/server/services/store"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
+	"github.com/LekcRg/metrics/internal/testdata"
 
 	"github.com/go-chi/chi/v5"
 
@@ -20,7 +20,7 @@ import (
 
 func TestValueRoutes(t *testing.T) {
 	valueStorage, _ := memstorage.New()
-	config := config.TestServerConfig
+	config := testdata.TestServerConfig
 	store := store.NewStore(valueStorage, config)
 	updateService := metric.NewMetricsService(valueStorage, config, store)
 	r := chi.NewRouter()

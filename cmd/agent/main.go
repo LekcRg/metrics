@@ -24,6 +24,6 @@ func main() {
 	<-readySignal
 
 	logger.Log.Info("Start sending metrics")
-	go metrics.StartSending(&monitor, config.ReportInterval, config.Addr, config.IsHttps)
+	go metrics.StartSending(&monitor, config.ReportInterval, config.Addr, config.IsHTTPS)
 	wg.Wait()
 }
