@@ -59,10 +59,12 @@ func (s Store) Save() error {
 }
 
 func (s Store) StartSaving() {
-	for {
-		time.Sleep(time.Duration(s.cfg.StoreInterval) * time.Second)
-
-		s.Save()
+	ticker := time.NewTicker(time.Duration(s.cfg.StoreInterval) * time.Second)
+	for range ticker.C {
+		err := s.Save()
+		if err != nil {
+			logger.Log.Error("Error while save")
+		}
 	}
 }
 

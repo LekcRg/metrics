@@ -43,9 +43,8 @@ func getMonitoringData(monitor *map[string]float64) {
 func Start(monitor *map[string]float64, interval int, readySignal chan bool) {
 	getMonitoringData(monitor)
 	readySignal <- true
-	time.Sleep(time.Duration(interval) * time.Second)
-	for {
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	for range ticker.C {
 		getMonitoringData(monitor)
-		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }

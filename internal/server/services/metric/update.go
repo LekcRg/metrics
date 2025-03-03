@@ -41,48 +41,52 @@ func (s *MetricService) UpdateMetric(reqName string, reqType string, reqValue st
 	return nil
 }
 
-func (s *MetricService) UpdateMetricJSON(json models.Metrics) (models.Metrics, error) {
-	reqName := json.ID
-	reqType := json.MType
-	delta := json.Delta
-	value := json.Value
+func (s *MetricService) HandleCounterUpdate(json models.Metrics) (models.Metrics, error) {
+	s.db.UpdateCounter(json.ID, storage.Counter(*json.Delta))
 
-	if reqType == "gauge" && value != nil {
-		s.db.UpdateGauge(reqName, storage.Gauge(*value))
-
-		newVal, err := s.db.GetGaugeByName(reqName)
-		if err != nil {
-			logger.Log.Error("error while getting new gauge value")
-			return models.Metrics{}, fmt.Errorf("can'not get new value")
-		}
-
-		if s.config.SyncSave {
-			err := s.store.Save()
-			if err != nil {
-				logger.Log.Error("Error while saving store")
-			}
-		}
-
-		return models.Metrics{
-			ID:    reqName,
-			MType: reqType,
-			Value: &newVal,
-		}, nil
-
-	} else if reqType == "counter" && delta != nil {
-		s.db.UpdateCounter(reqName, storage.Counter(*delta))
-
-		newVal, err := s.db.GetCounterByName(reqName)
-		if err != nil {
-			logger.Log.Error("error while getting new counter value")
-			return models.Metrics{}, fmt.Errorf("can'not get new value")
-		}
-
-		return models.Metrics{
-			ID:    reqName,
-			MType: reqType,
-			Delta: &newVal,
-		}, nil
+	newVal, err := s.db.GetCounterByName(json.ID)
+	if err != nil {
+		logger.Log.Error("error while getting new counter value")
+		return models.Metrics{}, fmt.Errorf("can'not get new value")
 	}
-	return models.Metrics{}, fmt.Errorf("invalid type or empty value")
+
+	return models.Metrics{
+		ID:    json.ID,
+		MType: json.MType,
+		Delta: &newVal,
+	}, nil
+}
+
+func (s *MetricService) HandleGaugeUpdate(json models.Metrics) (models.Metrics, error) {
+	s.db.UpdateGauge(json.ID, storage.Gauge(*json.Value))
+
+	newVal, err := s.db.GetGaugeByName(json.ID)
+	if err != nil {
+		logger.Log.Error("error while getting new gauge value")
+		return models.Metrics{}, fmt.Errorf("can'not get new value")
+	}
+
+	if s.config.SyncSave {
+		err := s.store.Save()
+		if err != nil {
+			logger.Log.Error("Error while saving store")
+		}
+	}
+
+	return models.Metrics{
+		ID:    json.ID,
+		MType: json.MType,
+		Value: &newVal,
+	}, nil
+}
+
+func (s *MetricService) UpdateMetricJSON(json models.Metrics) (models.Metrics, error) {
+	switch {
+	case json.MType == "gauge" && json.Value != nil:
+		return s.HandleGaugeUpdate(json)
+	case json.MType == "counter" && json.Delta != nil:
+		return s.HandleCounterUpdate(json)
+	default:
+		return models.Metrics{}, fmt.Errorf("invalid type or empty value")
+	}
 }

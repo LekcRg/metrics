@@ -68,10 +68,13 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 		baseURL = "http://" + baseURL
 	}
 
-	countSent := 0
+	countSent := 1
 	randomVal := getRandomValue()
 	sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
-	for {
+	logger.Log.Info(strconv.Itoa(countSent) + " time sent")
+
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	for range ticker.C {
 		countSent++
 		for key, value := range *monitor {
 			sendVal := storage.Gauge(value)
@@ -83,6 +86,5 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 		randomVal := getRandomValue()
 		sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
 		logger.Log.Info(strconv.Itoa(countSent) + " time sent")
-		time.Sleep(time.Duration(interval) * time.Second)
 	}
 }
