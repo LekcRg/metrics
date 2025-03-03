@@ -9,9 +9,9 @@ import (
 
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
-	"github.com/LekcRg/metrics/internal/server/services"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
+	"github.com/LekcRg/metrics/internal/server/services/store"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
-	"github.com/LekcRg/metrics/internal/server/store"
 
 	"github.com/LekcRg/metrics/internal/server/router"
 )
@@ -26,20 +26,25 @@ func main() {
 		logger.Log.Fatal(err.Error())
 	}
 
+	logger.Log.Info("Create store service")
+	store := store.NewStore(storage, config)
+
 	logger.Log.Info("Create metric service")
-	updateService := services.NewMetricsService(storage)
+	updateService := metric.NewMetricsService(storage, config, store)
 
 	logger.Log.Info("Create router")
-	router := router.NewRouter(updateService)
-
-	logger.Log.Info("Start saving store")
+	router := router.NewRouter(*updateService)
 
 	if config.Restore {
-		store.Restore(updateService, config.FileStoragePath)
+		store.Restore()
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go store.StartSaving(updateService, config.StoreInterval, config.FileStoragePath)
+
+	if !config.SyncSave && config.StoreInterval > 0 {
+		logger.Log.Info("Start saving store")
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go store.StartSaving()
+	}
 
 	server := &http.Server{
 		Addr:    config.Addr,
@@ -51,7 +56,7 @@ func main() {
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
 
-		err := store.Save(updateService, config.FileStoragePath)
+		err := store.Save()
 		if err != nil {
 			logger.Log.Error("Error while saving store")
 		}

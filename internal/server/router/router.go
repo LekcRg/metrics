@@ -4,11 +4,11 @@ import (
 	"github.com/LekcRg/metrics/internal/cgzip"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/server/handler/home"
-	"github.com/LekcRg/metrics/internal/server/services"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter(metricService services.MetricService) chi.Router {
+func NewRouter(metricService metric.MetricService) chi.Router {
 	r := chi.NewRouter()
 	r.Use(logger.RequestLogger)
 

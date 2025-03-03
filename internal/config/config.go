@@ -18,20 +18,34 @@ const defaultReportInterval = 10
 const defaultPollInterval = 2
 const defaultHTTPS = false
 
+// TODO: File with testData
+var TestServerConfig = ServerConfig{
+	commonConfig: commonConfig{
+		Addr:   defaultAddr,
+		LogLvl: defaultLogLvl,
+		IsDev:  defaultIsDev,
+	},
+	StoreInterval:   defaultStoreInterval,
+	FileStoragePath: defaultFileStoragePath,
+	Restore:         defaultRestore,
+	SyncSave:        false,
+}
+
 type commonConfig struct {
 	Addr   string `env:"ADDRESS"`
 	LogLvl string `env:"LOG_LVL"`
 	IsDev  bool   `env:"IS_DEV"`
 }
 
-type serverConfig struct {
+type ServerConfig struct {
 	commonConfig
-	StoreInterval   int    `env:"STORE_INTERVAL"`
+	StoreInterval   int    `env:"STORE_INTERVAL" envDefault:"-1"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	SyncSave        bool
 }
 
-type agentConfig struct {
+type AgentConfig struct {
 	commonConfig
 	ReportInterval int  `env:"REPORT_INTERVAL"`
 	PollInterval   int  `env:"POLL_INTERVAL"`
@@ -63,9 +77,48 @@ func loadCommonCfg(cfg *commonConfig) error {
 
 	return nil
 }
+func LoadServerCfg() ServerConfig {
+	var cfg = ServerConfig{}
 
-func LoadAgentCfg() agentConfig {
-	cfg := agentConfig{}
+	flag.IntVar(&cfg.StoreInterval, "i", defaultStoreInterval, "time is seconds to save db to store(file)")
+	flag.StringVar(&cfg.FileStoragePath, "f", defaultFileStoragePath, "path to save store")
+	flag.BoolVar(&cfg.Restore, "r", defaultRestore, "restore db from file")
+	err := loadCommonCfg(&cfg.commonConfig)
+	if err != nil {
+		logger.Log.Error("Error while load common config")
+	}
+	// flag.Parse() in loadCommonCfg()
+
+	var envVars ServerConfig
+	err = env.Parse(&envVars)
+	if err != nil {
+		logger.Log.Error("Error env vars")
+	}
+
+	if envVars.StoreInterval >= 0 {
+		cfg.StoreInterval = envVars.StoreInterval
+	}
+
+	if envVars.FileStoragePath != "" {
+		cfg.FileStoragePath = envVars.FileStoragePath
+	}
+
+	if envVars.Restore {
+		cfg.Restore = envVars.Restore
+	}
+
+	cfg.SyncSave = cfg.StoreInterval == 0
+
+	cfgString := fmt.Sprintf("%+v\n", cfg)
+	fmt.Println(cfgString)
+
+	// logger.Log.Info(cfgString)
+
+	return cfg
+}
+
+func LoadAgentCfg() AgentConfig {
+	cfg := AgentConfig{}
 
 	flag.IntVar(&cfg.ReportInterval, "r", defaultReportInterval, "interval for sending runtime metrics")
 	flag.IntVar(&cfg.PollInterval, "p", defaultPollInterval, "interval for getting runtime metrics")
@@ -74,13 +127,13 @@ func LoadAgentCfg() agentConfig {
 	if err != nil {
 		logger.Log.Error("Error while load common config")
 	}
+	// flag.Parse() in loadCommonCfg()
 
-	var envVars agentConfig
+	var envVars AgentConfig
 	err = env.Parse(&envVars)
 	if err != nil {
 		logger.Log.Error("Error parse flags")
 	}
-	// flag.Parse() in loadCommonCfg()
 
 	if envVars.ReportInterval != 0 {
 		cfg.ReportInterval = envVars.ReportInterval
@@ -96,47 +149,6 @@ func LoadAgentCfg() agentConfig {
 
 	cfgString := fmt.Sprintf("%+v\n", cfg)
 	fmt.Println(cfgString)
-	// logger.Log.Info(cfgString)
-
-	return cfg
-}
-
-func LoadServerCfg() serverConfig {
-	var cfg = serverConfig{}
-
-	flag.IntVar(&cfg.StoreInterval, "i", defaultStoreInterval, "time is seconds to save db to store(file)")
-	flag.StringVar(&cfg.FileStoragePath, "f", defaultFileStoragePath, "path to save store")
-	flag.BoolVar(&cfg.Restore, "r", defaultRestore, "restore db from file")
-	loadCommonCfg(&cfg.commonConfig)
-	err := loadCommonCfg(&cfg.commonConfig)
-	if err != nil {
-		logger.Log.Error("Error while load common config")
-	}
-	// flag.Parse() in loadCommonCfg()
-
-	var envVars serverConfig
-	err = env.Parse(&envVars)
-	if err != nil {
-		logger.Log.Error("Error env vars")
-	}
-
-	if envVars.StoreInterval != 0 {
-		cfg.StoreInterval = envVars.StoreInterval
-	}
-
-	if envVars.FileStoragePath != "" {
-		cfg.FileStoragePath = envVars.FileStoragePath
-	}
-
-	if envVars.Restore {
-		cfg.Restore = envVars.Restore
-	}
-
-	cfgString := fmt.Sprintf("%+v\n", cfg)
-	fmt.Println("cfg.IsDev")
-	fmt.Println(cfg.IsDev)
-	fmt.Println(cfgString)
-
 	// logger.Log.Info(cfgString)
 
 	return cfg

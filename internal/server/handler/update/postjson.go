@@ -8,10 +8,10 @@ import (
 
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/server/services"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
 )
 
-func PostJSON(s services.MetricService) http.HandlerFunc {
+func PostJSON(s metric.MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 

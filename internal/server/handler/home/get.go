@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/server/services"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
 )
 
 var styles = `<style>
@@ -98,7 +98,7 @@ func generateHTML(gaugeList []string, counterList []string) string {
 	return HTML
 }
 
-func Get(s services.MetricService) http.HandlerFunc {
+func Get(s metric.MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		all, err := s.GetAllMetrics()
 		if err != nil {
