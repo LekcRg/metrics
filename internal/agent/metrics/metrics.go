@@ -1,11 +1,13 @@
 package metrics
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/LekcRg/metrics/internal/cgzip"
@@ -60,7 +62,7 @@ func getRandomValue() storage.Gauge {
 	return randomValueLeft + randomValueRight
 }
 
-func StartSending(monitor *map[string]float64, interval int, addr string, https bool) {
+func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, interval int, addr string, https bool) {
 	baseURL := addr + "/update"
 	if https {
 		baseURL = "https://" + baseURL
@@ -74,17 +76,24 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 	logger.Log.Info(strconv.Itoa(countSent) + " time sent")
 
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
-	for range ticker.C {
-		countSent++
-		for key, value := range *monitor {
-			sendVal := storage.Gauge(value)
-			sendMetric("gauge", key, &sendVal, nil, baseURL)
-			pollCountVal := storage.Counter(1)
-			sendMetric("counter", "PollCount", nil, &pollCountVal, baseURL)
-		}
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Log.Info("Stop send metrics")
+			wg.Done()
+			return
+		case <-ticker.C:
+			countSent++
+			for key, value := range *monitor {
+				sendVal := storage.Gauge(value)
+				sendMetric("gauge", key, &sendVal, nil, baseURL)
+				pollCountVal := storage.Counter(1)
+				sendMetric("counter", "PollCount", nil, &pollCountVal, baseURL)
+			}
 
-		randomVal := getRandomValue()
-		sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
-		logger.Log.Info(strconv.Itoa(countSent) + " time sent")
+			randomVal := getRandomValue()
+			sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
+			logger.Log.Info(strconv.Itoa(countSent) + " time sent")
+		}
 	}
 }

@@ -1,8 +1,12 @@
 package monitoring
 
 import (
+	"context"
 	"runtime"
+	"sync"
 	"time"
+
+	"github.com/LekcRg/metrics/internal/logger"
 )
 
 func getMonitoringData(monitor *map[string]float64) {
@@ -40,11 +44,18 @@ func getMonitoringData(monitor *map[string]float64) {
 	}
 }
 
-func Start(monitor *map[string]float64, interval int, readySignal chan bool) {
+func Start(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, interval int, readySignal chan bool) {
 	getMonitoringData(monitor)
 	readySignal <- true
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
-	for range ticker.C {
-		getMonitoringData(monitor)
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Log.Info("Stop monitoring")
+			wg.Done()
+			return
+		case <-ticker.C:
+			getMonitoringData(monitor)
+		}
 	}
 }

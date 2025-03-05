@@ -1,8 +1,10 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/LekcRg/metrics/internal/config"
@@ -58,12 +60,19 @@ func (s Store) Save() error {
 	return nil
 }
 
-func (s Store) StartSaving() {
+func (s Store) StartSaving(ctx context.Context, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(time.Duration(s.cfg.StoreInterval) * time.Second)
-	for range ticker.C {
-		err := s.Save()
-		if err != nil {
-			logger.Log.Error("Error while save")
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Log.Info("Stopped store auto saving")
+			wg.Done()
+			return
+		case <-ticker.C:
+			err := s.Save()
+			if err != nil {
+				logger.Log.Error("Error while save")
+			}
 		}
 	}
 }
