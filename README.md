@@ -33,7 +33,7 @@ git fetch template && git checkout template/main .github
 
 ### Prepare
 
-1. Скачать `metricstest` и `random` по ссылке выше для вашей системы. 
+1. Скачать `metricstest` и `random` по ссылке выше для вашей системы.
 2. Переместить в `~/go/bin`, переименовать в `metricstest` и `random`.
 3. Для этих файлов сделать
 ```sh
@@ -163,7 +163,7 @@ TEMP_FILE=$(random tempfile)
 metricstest -test.v -test.run=^TestIteration10A$ \
   -agent-binary-path=cmd/agent/agent \
   -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' \
+  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
   -server-port=$SERVER_PORT \
   -source-path=.
 ```
@@ -174,8 +174,7 @@ TEMP_FILE=$(random tempfile)
 metricstest -test.v -test.run=^TestIteration10B$ \
   -agent-binary-path=cmd/agent/agent \
   -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable' \
+  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
   -server-port=$SERVER_PORT \
   -source-path=.
 ```
-

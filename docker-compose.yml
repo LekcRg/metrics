@@ -1,0 +1,15 @@
+services:
+  postgres:
+    container_name: metric-db
+    image: postgres:17-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - metric-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=metrics
+
+volumes:
+  metric-db:

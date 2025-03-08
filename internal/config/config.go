@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/caarlos0/env/v11"
@@ -17,6 +16,7 @@ const defaultRestore = false
 const defaultReportInterval = 10
 const defaultPollInterval = 2
 const defaultHTTPS = false
+const defaultDatabaseDSN = "postgresql://postgres:postgres@localhost:54321/metrics"
 
 type CommonConfig struct {
 	Addr   string `env:"ADDRESS"`
@@ -29,6 +29,7 @@ type ServerConfig struct {
 	StoreInterval   int    `env:"STORE_INTERVAL" envDefault:"-1"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 	SyncSave        bool
 }
 
@@ -70,6 +71,7 @@ func LoadServerCfg() ServerConfig {
 	flag.IntVar(&cfg.StoreInterval, "i", defaultStoreInterval, "time is seconds to save db to store(file)")
 	flag.StringVar(&cfg.FileStoragePath, "f", defaultFileStoragePath, "path to save store")
 	flag.BoolVar(&cfg.Restore, "r", defaultRestore, "restore db from file")
+	flag.StringVar(&cfg.DatabaseDSN, "d", defaultDatabaseDSN, "Postgres database DSN")
 	err := loadCommonCfg(&cfg.CommonConfig)
 	if err != nil {
 		logger.Log.Error("Error while load common config")
@@ -94,12 +96,11 @@ func LoadServerCfg() ServerConfig {
 		cfg.Restore = envVars.Restore
 	}
 
+	if envVars.DatabaseDSN != "" {
+		cfg.DatabaseDSN = envVars.DatabaseDSN
+	}
+
 	cfg.SyncSave = cfg.StoreInterval == 0
-
-	cfgString := fmt.Sprintf("%+v\n", cfg)
-	fmt.Println(cfgString)
-
-	// logger.Log.Info(cfgString)
 
 	return cfg
 }
@@ -133,10 +134,6 @@ func LoadAgentCfg() AgentConfig {
 	if envVars.IsHTTPS {
 		cfg.IsHTTPS = envVars.IsHTTPS
 	}
-
-	cfgString := fmt.Sprintf("%+v\n", cfg)
-	fmt.Println(cfgString)
-	// logger.Log.Info(cfgString)
 
 	return cfg
 }

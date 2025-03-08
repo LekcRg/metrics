@@ -16,4 +16,5 @@ type Storage interface {
 	GetAll() (Database, error)
 	SaveManyGauge(GaugeCollection) error
 	SaveManyCounter(CounterCollection) error
+	Ping() error
 }

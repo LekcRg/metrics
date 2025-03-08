@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -23,6 +24,9 @@ func exit(cancel context.CancelFunc) {
 func main() {
 	config := config.LoadAgentCfg()
 	logger.Initialize(config.LogLvl, config.IsDev)
+	cfgString := fmt.Sprintf("%+v\n", config)
+	logger.Log.Info(cfgString)
+
 	var monitor map[string]float64
 	var wg sync.WaitGroup
 	wg.Add(2)

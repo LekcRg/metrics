@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,9 +12,11 @@ import (
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/server/router"
+	"github.com/LekcRg/metrics/internal/server/services/dbping"
 	"github.com/LekcRg/metrics/internal/server/services/metric"
 	"github.com/LekcRg/metrics/internal/server/services/store"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
+	"github.com/LekcRg/metrics/internal/server/storage/postgres"
 )
 
 func exit(cancel context.CancelFunc, server *http.Server, store *store.Store) {
@@ -34,6 +37,8 @@ func exit(cancel context.CancelFunc, server *http.Server, store *store.Store) {
 func main() {
 	config := config.LoadServerCfg()
 	logger.Initialize(config.LogLvl, config.IsDev)
+	cfgString := fmt.Sprintf("%+v\n", config)
+	logger.Log.Info(cfgString)
 
 	logger.Log.Info("Create storage")
 	storage, err := memstorage.New()
@@ -41,14 +46,20 @@ func main() {
 		logger.Log.Fatal(err.Error())
 	}
 
+	logger.Log.Info("create pg storage")
+	pg := postgres.NewPostgres(config)
+
 	logger.Log.Info("Create store service")
 	store := store.NewStore(storage, config)
 
 	logger.Log.Info("Create metric service")
-	updateService := metric.NewMetricsService(storage, config, store)
+	metricService := metric.NewMetricsService(storage, config, store)
+
+	logger.Log.Info("Create dbping service")
+	ping := dbping.NewPing(pg, config)
 
 	logger.Log.Info("Create router")
-	router := router.NewRouter(*updateService)
+	router := router.NewRouter(*metricService, *ping)
 
 	if config.Restore {
 		store.Restore()
