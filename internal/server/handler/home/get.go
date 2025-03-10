@@ -103,6 +103,7 @@ func Get(s metric.MetricService) http.HandlerFunc {
 		all, err := s.GetAllMetrics()
 		if err != nil {
 			http.Error(w, "Internal error 500", http.StatusInternalServerError)
+			return
 		}
 		gaugeList := []string{}
 		counterList := []string{}

@@ -20,7 +20,8 @@ exclude_file = []
 exclude_regex = ["_test.go"]
 exclude_unchanged = false
 follow_symlink = false
-full_bin = "IS_DEV=true RESTORE=true ../../tmp/server"
+# full_bin = "IS_DEV=true RESTORE=true ../../tmp/server"
+full_bin = "IS_DEV=true DATABASE_DSN=postgresql://postgres:postgres@localhost:5432/metrics ../../tmp/server"
 include_dir = []
 include_ext = ["go", "tpl", "tmpl", "html"]
 include_file = []

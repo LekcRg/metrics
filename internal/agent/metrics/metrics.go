@@ -62,6 +62,22 @@ func getRandomValue() storage.Gauge {
 	return randomValueLeft + randomValueRight
 }
 
+func sendAllMetrics(monitor *map[string]float64, baseURL string, countSent *int) {
+	*countSent++
+	countRequests := 0
+	for key, value := range *monitor {
+		countRequests++
+		sendVal := storage.Gauge(value)
+		sendMetric("gauge", key, &sendVal, nil, baseURL)
+		pollCountVal := storage.Counter(1)
+		sendMetric("counter", "PollCount", nil, &pollCountVal, baseURL)
+	}
+
+	randomVal := getRandomValue()
+	sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
+	logger.Log.Info(strconv.Itoa(*countSent) + " time sent. Now was " + strconv.Itoa(countRequests) + " requests")
+}
+
 func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, interval int, addr string, https bool) {
 	baseURL := addr + "/update"
 	if https {
@@ -71,9 +87,7 @@ func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]f
 	}
 
 	countSent := 1
-	randomVal := getRandomValue()
-	sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
-	logger.Log.Info(strconv.Itoa(countSent) + " time sent")
+	sendAllMetrics(monitor, baseURL, &countSent)
 
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	for {
@@ -83,17 +97,7 @@ func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]f
 			wg.Done()
 			return
 		case <-ticker.C:
-			countSent++
-			for key, value := range *monitor {
-				sendVal := storage.Gauge(value)
-				sendMetric("gauge", key, &sendVal, nil, baseURL)
-				pollCountVal := storage.Counter(1)
-				sendMetric("counter", "PollCount", nil, &pollCountVal, baseURL)
-			}
-
-			randomVal := getRandomValue()
-			sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
-			logger.Log.Info(strconv.Itoa(countSent) + " time sent")
+			sendAllMetrics(monitor, baseURL, &countSent)
 		}
 	}
 }

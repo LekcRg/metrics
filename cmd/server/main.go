@@ -15,11 +15,12 @@ import (
 	"github.com/LekcRg/metrics/internal/server/services/dbping"
 	"github.com/LekcRg/metrics/internal/server/services/metric"
 	"github.com/LekcRg/metrics/internal/server/services/store"
+	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
 	"github.com/LekcRg/metrics/internal/server/storage/postgres"
 )
 
-func exit(cancel context.CancelFunc, server *http.Server, store *store.Store) {
+func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
@@ -29,6 +30,7 @@ func exit(cancel context.CancelFunc, server *http.Server, store *store.Store) {
 	if err != nil {
 		logger.Log.Error("Error while saving store")
 	}
+	db.Close()
 	if err := server.Close(); err != nil {
 		logger.Log.Error("HTTP close error")
 	}
@@ -40,23 +42,28 @@ func main() {
 	cfgString := fmt.Sprintf("%+v\n", config)
 	logger.Log.Info(cfgString)
 
-	logger.Log.Info("Create storage")
-	storage, err := memstorage.New()
+	var db storage.Storage
+	var err error
+
+	if config.DatabaseDSN != "" {
+		logger.Log.Info("create pg storage")
+		db, err = postgres.NewPostgres(config)
+	} else {
+		logger.Log.Info("Create memstorage")
+		db, err = memstorage.New()
+	}
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}
 
-	logger.Log.Info("create pg storage")
-	pg := postgres.NewPostgres(config)
+	logger.Log.Info("Create dbping service")
+	ping := dbping.NewPing(db, config)
 
 	logger.Log.Info("Create store service")
-	store := store.NewStore(storage, config)
+	store := store.NewStore(db, config)
 
 	logger.Log.Info("Create metric service")
-	metricService := metric.NewMetricsService(storage, config, store)
-
-	logger.Log.Info("Create dbping service")
-	ping := dbping.NewPing(pg, config)
+	metricService := metric.NewMetricsService(db, config, store)
 
 	logger.Log.Info("Create router")
 	router := router.NewRouter(*metricService, *ping)
@@ -79,7 +86,7 @@ func main() {
 		Handler: router,
 	}
 
-	go exit(cancel, server, store)
+	go exit(cancel, server, store, db)
 
 	err = server.ListenAndServe()
 	if err != http.ErrServerClosed {

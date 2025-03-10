@@ -74,3 +74,11 @@ func (s *MemStorage) SaveManyCounter(counters storage.CounterCollection) error {
 	}
 	return nil
 }
+
+func (s *MemStorage) Ping() error {
+	return nil
+}
+
+func (s MemStorage) Close() {
+	//
+}

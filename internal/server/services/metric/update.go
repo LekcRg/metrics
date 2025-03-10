@@ -42,9 +42,8 @@ func (s *MetricService) UpdateMetric(reqName string, reqType string, reqValue st
 }
 
 func (s *MetricService) HandleCounterUpdate(json models.Metrics) (models.Metrics, error) {
-	s.db.UpdateCounter(json.ID, storage.Counter(*json.Delta))
+	newVal, err := s.db.UpdateCounter(json.ID, storage.Counter(*json.Delta))
 
-	newVal, err := s.db.GetCounterByName(json.ID)
 	if err != nil {
 		logger.Log.Error("error while getting new counter value")
 		return models.Metrics{}, fmt.Errorf("can'not get new value")
@@ -58,9 +57,8 @@ func (s *MetricService) HandleCounterUpdate(json models.Metrics) (models.Metrics
 }
 
 func (s *MetricService) HandleGaugeUpdate(json models.Metrics) (models.Metrics, error) {
-	s.db.UpdateGauge(json.ID, storage.Gauge(*json.Value))
+	newVal, err := s.db.UpdateGauge(json.ID, storage.Gauge(*json.Value))
 
-	newVal, err := s.db.GetGaugeByName(json.ID)
 	if err != nil {
 		logger.Log.Error("error while getting new gauge value")
 		return models.Metrics{}, fmt.Errorf("can'not get new value")

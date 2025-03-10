@@ -16,7 +16,9 @@ const defaultRestore = false
 const defaultReportInterval = 10
 const defaultPollInterval = 2
 const defaultHTTPS = false
-const defaultDatabaseDSN = "postgresql://postgres:postgres@localhost:54321/metrics"
+const defaultDatabaseDSN = ""
+
+// const defaultDatabaseDSN = "postgresql://postgres:postgres@localhost:5432/metrics"
 
 type CommonConfig struct {
 	Addr   string `env:"ADDRESS"`
@@ -100,7 +102,11 @@ func LoadServerCfg() ServerConfig {
 		cfg.DatabaseDSN = envVars.DatabaseDSN
 	}
 
-	cfg.SyncSave = cfg.StoreInterval == 0
+	if cfg.DatabaseDSN != "" {
+		cfg.Restore = false
+	} else {
+		cfg.SyncSave = cfg.StoreInterval == 0
+	}
 
 	return cfg
 }

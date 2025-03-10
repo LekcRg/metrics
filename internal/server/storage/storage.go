@@ -17,4 +17,5 @@ type Storage interface {
 	SaveManyGauge(GaugeCollection) error
 	SaveManyCounter(CounterCollection) error
 	Ping() error
+	Close()
 }
