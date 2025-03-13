@@ -15,8 +15,6 @@ type Storage interface {
 	GetGaugeByName(name string) (Gauge, error)
 	GetCounterByName(name string) (Counter, error)
 	GetAll() (Database, error)
-	SaveManyGauge(GaugeCollection) error
-	SaveManyCounter(CounterCollection) error
 	Ping() error
 	Close()
 }

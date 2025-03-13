@@ -79,6 +79,7 @@ func PostMany(s metric.MetricService) http.HandlerFunc {
 
 		err = s.UpdateMany(parsedBody)
 		if err != nil {
+			logger.Log.Error(err.Error())
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}

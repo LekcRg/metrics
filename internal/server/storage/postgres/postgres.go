@@ -8,6 +8,7 @@ import (
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/server/storage"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -96,38 +97,47 @@ func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, 
 }
 
 func (p Postgres) UpdateMany(list storage.Database) error {
-	ctx := context.Background()
-	tx, err := p.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
 	reqCounter := `INSERT INTO counter (name, value)
 	VALUES ($1, $2)
 	ON CONFLICT (name) DO UPDATE
 	SET value = counter.value + $2
 	RETURNING value;
 	`
-
-	for key, item := range list.Counter {
-		_, err := tx.Exec(ctx, reqCounter, key, item)
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
-	}
-
 	reqGauge := `INSERT INTO gauge (name, value)
 	VALUES ($1, $2)
 	ON CONFLICT (name) DO UPDATE
 	SET value = EXCLUDED.value
 	RETURNING value;
 	`
-	for key, item := range list.Gauge {
-		_, err := tx.Exec(ctx, reqGauge, key, item)
-		if err != nil {
-			tx.Rollback(ctx)
-			return err
-		}
+
+	batch := &pgx.Batch{}
+
+	for key, value := range list.Counter {
+		batch.Queue(reqCounter, key, value)
+	}
+
+	for key, value := range list.Gauge {
+		batch.Queue(reqGauge, key, value)
+	}
+
+	ctx := context.Background()
+	tx, err := p.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	br := tx.SendBatch(ctx, batch)
+	defer br.Close()
+
+	_, err = br.Exec()
+	if err != nil {
+		return err
+	}
+
+	err = br.Close()
+	if err != nil {
+		return err
 	}
 
 	err = tx.Commit(ctx)
@@ -239,20 +249,6 @@ func (p Postgres) GetAll() (storage.Database, error) {
 		Gauge:   gaugeList,
 		Counter: counterList,
 	}, nil
-}
-
-func (p Postgres) SaveManyGauge(gauges storage.GaugeCollection) error {
-	// for key, item := range gauges {
-	// 	s.db.Gauge[key] = item
-	// }
-	return nil
-}
-
-func (p Postgres) SaveManyCounter(counters storage.CounterCollection) error {
-	// for key, item := range counters {
-	// 	s.db.Counter[key] = item
-	// }
-	return nil
 }
 
 func (p Postgres) Ping() error {
