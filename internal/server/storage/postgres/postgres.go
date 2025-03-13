@@ -38,7 +38,7 @@ func NewPostgres(config config.ServerConfig) (*Postgres, error) {
 
 	_, err = conn.Exec(ctx, `create table if not exists counter(
 	name text not null unique PRIMARY KEY,
-	value int not null,
+	value bigint not null,
 	created_at timestamp with time zone not null default now()
 	);`)
 	if err != nil {
@@ -210,8 +210,8 @@ func (p Postgres) GetGaugeByName(name string) (storage.Gauge, error) {
 	row.Scan(&val)
 
 	if !val.Valid {
-		logger.Log.Error("error while validate gauge value from db")
-		return 0, fmt.Errorf("error while validate gauge value from db")
+		logger.Log.Info("found null element")
+		return 0, fmt.Errorf("not found")
 	}
 
 	return storage.Gauge(val.Float64), nil
@@ -225,8 +225,8 @@ func (p Postgres) GetCounterByName(name string) (storage.Counter, error) {
 	row.Scan(&val)
 
 	if !val.Valid {
-		logger.Log.Error("error while validate counter value from db")
-		return 0, fmt.Errorf("error while validate counter value from db")
+		logger.Log.Info("found null element")
+		return 0, fmt.Errorf("not found")
 	}
 
 	return storage.Counter(val.Int64), nil

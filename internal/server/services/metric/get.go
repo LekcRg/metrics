@@ -39,8 +39,8 @@ func (s *MetricService) GetMetricJSON(json models.Metrics) (models.Metrics, erro
 	if reqType == "counter" {
 		val, err := s.db.GetCounterByName(reqName)
 		if err != nil {
-			logger.Log.Error("error while getting counter value")
-			return models.Metrics{}, fmt.Errorf("can'not get new value")
+			logger.Log.Info("not found counter value")
+			return models.Metrics{}, fmt.Errorf("can't get value")
 		}
 
 		return models.Metrics{
@@ -51,7 +51,7 @@ func (s *MetricService) GetMetricJSON(json models.Metrics) (models.Metrics, erro
 	} else if reqType == "gauge" {
 		val, err := s.db.GetGaugeByName(reqName)
 		if err != nil {
-			logger.Log.Error("error while getting gauge value")
+			logger.Log.Error("not found gauge value")
 			return models.Metrics{}, fmt.Errorf("can'not get new value")
 		}
 
