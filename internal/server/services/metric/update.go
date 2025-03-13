@@ -90,6 +90,10 @@ func (s *MetricService) UpdateMany(list []models.Metrics) error {
 		Counter: storage.CounterCollection{},
 	}
 
+	if len(list) == 0 {
+		return nil
+	}
+
 	for _, el := range list {
 		if el.MType == "gauge" && el.Value != nil {
 			newVals.Gauge[el.ID] = *el.Value
