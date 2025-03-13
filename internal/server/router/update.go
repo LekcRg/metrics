@@ -18,4 +18,5 @@ func UpdateRoutes(r chi.Router, metricService metric.MetricService) {
 			r.Post("/{name}/{value}", update.Post(metricService))
 		})
 	})
+	r.Post("/updates/", update.PostMany(metricService))
 }

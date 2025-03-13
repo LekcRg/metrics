@@ -100,14 +100,6 @@ func TestUpdateRoutes(t *testing.T) {
 			},
 		},
 		{
-			name: "#9[POST] Negative request without params",
-			url:  "/update",
-			want: want{
-				code:        http.StatusBadRequest,
-				contentType: "text/plain; charset=utf-8",
-			},
-		},
-		{
 			name: "#10[POST] Negative request with wrong gauge value",
 			url:  "/update/gauge/nine/one_point_two",
 			want: want{

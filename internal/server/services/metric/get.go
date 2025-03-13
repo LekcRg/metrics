@@ -9,12 +9,6 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-type GetMetricService interface {
-	GetMetric(reqName string, reqType string) (string, error)
-	GetMetricJSON(json models.Metrics) (models.Metrics, error)
-	GetAllMetrics() (storage.Database, error)
-}
-
 func (s *MetricService) GetMetric(reqName string, reqType string) (string, error) {
 	var (
 		resVal string

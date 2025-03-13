@@ -36,18 +36,8 @@ func postRequest(url string, body []byte) {
 	}
 }
 
-func sendMetric(
-	mType string, name string,
-	value *storage.Gauge, delta *storage.Counter,
-	baseURL string,
-) {
-	body := models.Metrics{
-		ID:    name,
-		MType: mType,
-		Value: value,
-		Delta: delta,
-	}
-	jsonBody, err := json.Marshal(body)
+func sendMetrics(list []models.Metrics, baseURL string) {
+	jsonBody, err := json.Marshal(list)
 	if err != nil {
 		fmt.Println()
 	}
@@ -62,31 +52,47 @@ func getRandomValue() storage.Gauge {
 	return randomValueLeft + randomValueRight
 }
 
+func generateJSON(
+	mType string, name string, value *storage.Gauge, delta *storage.Counter,
+) models.Metrics {
+	return models.Metrics{
+		MType: mType,
+		ID:    name,
+		Value: value,
+		Delta: delta,
+	}
+}
+
 func sendAllMetrics(monitor *map[string]float64, baseURL string, countSent *int) {
 	*countSent++
-	countRequests := 0
+	countRequests := 1
+	list := []models.Metrics{}
+	pollCountVal := storage.Counter(0)
 	for key, value := range *monitor {
 		countRequests++
 		sendVal := storage.Gauge(value)
-		sendMetric("gauge", key, &sendVal, nil, baseURL)
-		pollCountVal := storage.Counter(1)
-		sendMetric("counter", "PollCount", nil, &pollCountVal, baseURL)
+		list = append(list, generateJSON("gauge", key, &sendVal, nil))
+		pollCountVal++
 	}
 
 	randomVal := getRandomValue()
-	sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
+	list = append(list, generateJSON("gauge", "RandomValue", &randomVal, nil))
+	list = append(list, generateJSON("counter", "PollCount", nil, &pollCountVal))
+
+	sendMetrics(list, baseURL)
+
 	logger.Log.Info(strconv.Itoa(*countSent) + " time sent. Now was " + strconv.Itoa(countRequests) + " requests")
 }
 
 func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, interval int, addr string, https bool) {
-	baseURL := addr + "/update"
+	baseURL := addr + "/updates/"
 	if https {
 		baseURL = "https://" + baseURL
 	} else {
 		baseURL = "http://" + baseURL
 	}
 
-	countSent := 1
+	countSent := 0
 	sendAllMetrics(monitor, baseURL, &countSent)
 
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)

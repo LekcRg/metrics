@@ -9,11 +9,6 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-type UpdateMetricService interface {
-	UpdateMetricJSON(json models.Metrics) (models.Metrics, error)
-	UpdateMetric(reqType string, reqValue string, reqName string) error
-}
-
 func (s *MetricService) UpdateMetric(reqName string, reqType string, reqValue string) error {
 	if reqType == "counter" {
 		value, err := strconv.ParseInt(reqValue, 0, 64)
@@ -87,4 +82,21 @@ func (s *MetricService) UpdateMetricJSON(json models.Metrics) (models.Metrics, e
 	default:
 		return models.Metrics{}, fmt.Errorf("invalid type or empty value")
 	}
+}
+
+func (s *MetricService) UpdateMany(list []models.Metrics) error {
+	newVals := storage.Database{
+		Gauge:   storage.GaugeCollection{},
+		Counter: storage.CounterCollection{},
+	}
+
+	for _, el := range list {
+		if el.MType == "gauge" && el.Value != nil {
+			newVals.Gauge[el.ID] = *el.Value
+		} else if el.MType == "counter" && el.Delta != nil {
+			newVals.Counter[el.ID] += *el.Delta
+		}
+	}
+
+	return s.db.UpdateMany(newVals)
 }

@@ -1,6 +1,9 @@
 package dbping
 
-import "github.com/LekcRg/metrics/internal/config"
+import (
+	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/server/storage"
+)
 
 type db interface {
 	Ping() error
@@ -8,10 +11,10 @@ type db interface {
 
 type PingService struct {
 	cfg config.ServerConfig
-	db  db
+	db  storage.Storage
 }
 
-func NewPing(storage db, cfg config.ServerConfig) *PingService {
+func NewPing(storage storage.Storage, cfg config.ServerConfig) *PingService {
 	return &PingService{
 		cfg: cfg,
 		db:  storage,

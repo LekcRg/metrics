@@ -39,193 +39,24 @@ git fetch template && git checkout template/main .github
 ```sh
 chmod +x ~/go/bin/metricstest && chmod +x ~/go/bin/random
 ```
-4. Собрать сервер и агент (запуск из корня проекта)
+4. В корне проекта
 ```sh
-go build -o ./cmd/server/server ./cmd/server/*.go && go build -o ./cmd/agent/agent ./cmd/agent/*.go
+chome +x tests.sh
 ```
+5. Для запуска тестов, при запуске будет всегда собираться server и agent
 
-### Запуск самих тестов
-
-### Statictest
+1. Чтобы запустить все тесты
 ```sh
-go1.22.12 vet -vettool=$(which statictest) ./...
+./test.sh
 ```
-### 1
+2. Чтобы запустился тест для нужного инкремента
 ```sh
-metricstest -test.v -test.run=^TestIteration1$ \
--binary-path=cmd/server/server
+# ./test.sh {номер инкремента}
+./test.sh 4
 ```
-
-### 2
+3. Чтобы запустился тест для нескольких инкрементов
 ```sh
-metricstest -test.v -test.run=^TestIteration2A$ \
--source-path=. \
--agent-binary-path=cmd/agent/agent
+# ./test.sh {с какого инкремента начать} {какой инкремент будет последним}
+./test.sh 1-4
 ```
-```sh
-metricstest -test.v -test.run=^TestIteration2B$ \
--source-path=. \
--agent-binary-path=cmd/agent/agent
-```
-
-### 3
-```sh
-metricstest -test.v -test.run=^TestIteration3A$ \
--source-path=. \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server
-```
-```sh
-metricstest -test.v -test.run=^TestIteration3B$ \
--source-path=. \
--agent-binary-path=cmd/agent/agent \
--binary-path=cmd/server/server
-```
-
-### 4
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration4$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 5
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration5$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 6
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration6$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 7
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration7$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 8
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration8$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 9
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration9$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -file-storage-path=$TEMP_FILE \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 10
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration10A$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration10B$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 11
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration11$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-
-### 12
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration12$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-### 13
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration13$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
-### 14
-```sh
-SERVER_PORT=$(random unused-port)
-ADDRESS="localhost:${SERVER_PORT}"
-TEMP_FILE=$(random tempfile)
-metricstest -test.v -test.run=^TestIteration14$ \
-  -agent-binary-path=cmd/agent/agent \
-  -binary-path=cmd/server/server \
-  -database-dsn='postgres://postgres:postgres@localhost:5432/metrics?sslmode=disable' \
-  -key="${TEMP_FILE}" \
-  -server-port=$SERVER_PORT \
-  -source-path=.
-```
+Будут запущены все тесты от 1 до 4 (1,2,3,4)

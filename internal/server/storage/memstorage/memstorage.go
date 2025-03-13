@@ -31,6 +31,18 @@ func (s *MemStorage) UpdateGauge(name string, value storage.Gauge) (storage.Gaug
 	return s.db.Gauge[name], nil
 }
 
+func (s *MemStorage) UpdateMany(list storage.Database) error {
+	for key, item := range list.Gauge {
+		s.db.Gauge[key] = item
+	}
+
+	for key, item := range list.Counter {
+		s.db.Counter[key] += item
+	}
+
+	return nil
+}
+
 func (s *MemStorage) GetAllCounter() (storage.CounterCollection, error) {
 	collection := s.db.Counter
 	return collection, nil

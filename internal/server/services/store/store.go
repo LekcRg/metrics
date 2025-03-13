@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -12,18 +13,12 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-type db interface {
-	GetAll() (storage.Database, error)
-	SaveManyGauge(storage.GaugeCollection) error
-	SaveManyCounter(storage.CounterCollection) error
-}
-
 type Store struct {
 	cfg config.ServerConfig
-	db  db
+	db  storage.Storage
 }
 
-func NewStore(storage db, cfg config.ServerConfig) *Store {
+func NewStore(storage storage.Storage, cfg config.ServerConfig) *Store {
 	return &Store{
 		cfg: cfg,
 		db:  storage,
@@ -78,9 +73,12 @@ func (s Store) StartSaving(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (s Store) Restore() error {
+	if s.cfg.DatabaseDSN != "" {
+		return fmt.Errorf("postgres doesn't support restore from file")
+	}
 	file, err := os.ReadFile(s.cfg.FileStoragePath)
 	if err != nil {
-		logger.Log.Error("Can't open file")
+		logger.Log.Error("Can't open file with path " + s.cfg.FileStoragePath)
 		return err
 	}
 	var storage storage.Database
@@ -89,19 +87,7 @@ func (s Store) Restore() error {
 		return err
 	}
 
-	if len(storage.Gauge) > 0 {
-		err := s.db.SaveManyGauge(storage.Gauge)
-		if err != nil {
-			return err
-		}
-	}
-
-	if len(storage.Counter) > 0 {
-		err := s.db.SaveManyCounter(storage.Counter)
-		if err != nil {
-			return err
-		}
-	}
+	s.db.UpdateMany(storage)
 
 	logger.Log.Info("Success restore data from file " + s.cfg.FileStoragePath)
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
@@ -25,13 +24,24 @@ func NewPostgres(config config.ServerConfig) (*Postgres, error) {
 		return nil, err
 	}
 
-	req, err := os.ReadFile("../../internal/server/sql/create-tables.sql")
+	ctx := context.Background()
+
+	_, err = conn.Exec(ctx, `create table if not exists gauge(
+	name text not null unique PRIMARY KEY,
+	value double precision not null,
+	created_at timestamp with time zone not null default now()
+	);`)
 	if err != nil {
 		logger.Log.Error(err.Error())
 	}
-	_, err = conn.Exec(context.Background(), string(req))
+
+	_, err = conn.Exec(ctx, `create table if not exists counter(
+	name text not null unique PRIMARY KEY,
+	value int not null,
+	created_at timestamp with time zone not null default now()
+	);`)
 	if err != nil {
-		logger.Log.Error(err.Error())
+		return nil, err
 	}
 
 	return &Postgres{
@@ -66,7 +76,7 @@ func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, 
 	req := `INSERT INTO gauge (name, value)
 	VALUES ($1, $2)
 	ON CONFLICT (name) DO UPDATE
-	SET value = $2
+	SET value = EXCLUDED.value
 	RETURNING value;
 	`
 	row := p.db.QueryRow(context.Background(), req, name, value)
@@ -83,6 +93,49 @@ func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, 
 	}
 
 	return 0, fmt.Errorf("error while getting new value")
+}
+
+func (p Postgres) UpdateMany(list storage.Database) error {
+	ctx := context.Background()
+	tx, err := p.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	reqCounter := `INSERT INTO counter (name, value)
+	VALUES ($1, $2)
+	ON CONFLICT (name) DO UPDATE
+	SET value = counter.value + $2
+	RETURNING value;
+	`
+
+	for key, item := range list.Counter {
+		_, err := tx.Exec(ctx, reqCounter, key, item)
+		if err != nil {
+			tx.Rollback(ctx)
+			return err
+		}
+	}
+
+	reqGauge := `INSERT INTO gauge (name, value)
+	VALUES ($1, $2)
+	ON CONFLICT (name) DO UPDATE
+	SET value = EXCLUDED.value
+	RETURNING value;
+	`
+	for key, item := range list.Gauge {
+		_, err := tx.Exec(ctx, reqGauge, key, item)
+		if err != nil {
+			tx.Rollback(ctx)
+			return err
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p Postgres) GetAllCounter() (storage.CounterCollection, error) {
