@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/LekcRg/metrics/internal/common"
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -21,26 +22,48 @@ type Postgres struct {
 func NewPostgres(config config.ServerConfig) (*Postgres, error) {
 	conn, err := pgxpool.New(context.Background(), config.DatabaseDSN)
 	if err != nil {
-		logger.Log.Error("error while connecting to db")
+		return nil, err
+	}
+
+	err = common.Retry(func() error {
+		err = conn.Ping(context.Background())
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return nil, err
 	}
 
 	ctx := context.Background()
 
-	_, err = conn.Exec(ctx, `create table if not exists gauge(
-	name text not null unique PRIMARY KEY,
-	value double precision not null,
-	created_at timestamp with time zone not null default now()
-	);`)
+	err = common.Retry(func() error {
+		_, err := conn.Exec(ctx, `create table if not exists gauge(
+		name text not null unique PRIMARY KEY,
+		value double precision not null,
+		created_at timestamp with time zone not null default now()
+		);`)
+
+		return err
+	})
+
 	if err != nil {
-		logger.Log.Error(err.Error())
+		return nil, err
 	}
 
-	_, err = conn.Exec(ctx, `create table if not exists counter(
-	name text not null unique PRIMARY KEY,
-	value int not null,
-	created_at timestamp with time zone not null default now()
-	);`)
+	err = common.Retry(func() error {
+		_, err = conn.Exec(ctx, `create table if not exists counter(
+		name text not null unique PRIMARY KEY,
+		value int not null,
+		created_at timestamp with time zone not null default now()
+		);`)
+
+		return err
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -57,20 +80,31 @@ func (p Postgres) UpdateCounter(name string, value storage.Counter) (storage.Cou
 	SET value = counter.value + $2
 	RETURNING value;
 	`
-	row := p.db.QueryRow(context.Background(), req, name, value)
+	var result storage.Counter
 
-	var val sql.NullInt64
-	err := row.Scan(&val)
+	err := common.Retry(func() error {
+		row := p.db.QueryRow(context.Background(), req, name, value)
+
+		var val sql.NullInt64
+		err := row.Scan(&val)
+		if err != nil {
+			logger.Log.Error("error while scan setted counter value")
+			return err
+		}
+
+		if val.Valid {
+			result = storage.Counter(val.Int64)
+			return nil
+		}
+
+		return fmt.Errorf("error while getting new value")
+	})
+
 	if err != nil {
-		logger.Log.Error("error while scan setted counter value")
 		return 0, err
 	}
 
-	if val.Valid {
-		return storage.Counter(val.Int64), nil
-	}
-
-	return 0, fmt.Errorf("error while getting new value")
+	return result, nil
 }
 
 func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, error) {
@@ -80,20 +114,31 @@ func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, 
 	SET value = EXCLUDED.value
 	RETURNING value;
 	`
-	row := p.db.QueryRow(context.Background(), req, name, value)
+	var result storage.Gauge
 
-	var val sql.NullFloat64
-	err := row.Scan(&val)
+	err := common.Retry(func() error {
+		row := p.db.QueryRow(context.Background(), req, name, value)
+
+		var val sql.NullFloat64
+		err := row.Scan(&val)
+		if err != nil {
+			logger.Log.Error("error while scan setted gauge value")
+			return err
+		}
+
+		if val.Valid {
+			result = storage.Gauge(val.Float64)
+			return nil
+		}
+
+		return fmt.Errorf("error while getting new value")
+	})
+
 	if err != nil {
-		logger.Log.Error("error while scan setted counter value")
 		return 0, err
 	}
 
-	if val.Valid {
-		return storage.Gauge(val.Float64), nil
-	}
-
-	return 0, fmt.Errorf("error while getting new value")
+	return result, nil
 }
 
 func (p Postgres) UpdateMany(list storage.Database) error {
@@ -121,97 +166,129 @@ func (p Postgres) UpdateMany(list storage.Database) error {
 	}
 
 	ctx := context.Background()
-	tx, err := p.db.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
+	return common.Retry(func() error {
+		tx, err := p.db.BeginTx(ctx, pgx.TxOptions{})
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback(ctx)
+
+		br := tx.SendBatch(ctx, batch)
+		defer br.Close()
+
+		_, err = br.Exec()
+		if err != nil {
+			return err
+		}
+
+		err = br.Close()
+		if err != nil {
+			return err
+		}
+
+		err = tx.Commit(ctx)
 		return err
-	}
-	defer tx.Rollback(ctx)
-
-	br := tx.SendBatch(ctx, batch)
-	defer br.Close()
-
-	_, err = br.Exec()
-	if err != nil {
-		return err
-	}
-
-	err = br.Close()
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func (p Postgres) GetAllCounter() (storage.CounterCollection, error) {
 	req := `SELECT name, value FROM counter`
-	rows, err := p.db.Query(context.Background(), req)
+	var list storage.CounterCollection
+	err := common.Retry(func() error {
+		rows, err := p.db.Query(context.Background(), req)
+		defer rows.Close()
+		if err != nil {
+			logger.Log.Error("error while sending request to db")
+			return err
+		}
+
+		list = make(storage.CounterCollection, 0)
+		for rows.Next() {
+			var name string
+			var val sql.NullInt64
+			err = rows.Scan(&name, &val)
+			if err != nil {
+				logger.Log.Error(err.Error())
+				return err
+			}
+
+			if !val.Valid {
+				return fmt.Errorf("error while validate value")
+			}
+
+			list[name] = storage.Counter(val.Int64)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		logger.Log.Error("error while sending request to db")
 		return nil, err
 	}
 
-	list := make(storage.CounterCollection, 0)
-	for rows.Next() {
-		var name string
-		var val sql.NullInt64
-		err = rows.Scan(&name, &val)
-		if err != nil {
-			logger.Log.Error(err.Error())
-			return nil, err
-		}
-
-		if !val.Valid {
-			return nil, fmt.Errorf("error while validate value")
-		}
-
-		list[name] = storage.Counter(val.Int64)
-	}
 	return list, nil
 }
 
-func (p Postgres) GetAllGouge() (storage.GaugeCollection, error) {
+func (p Postgres) GetAllGauge() (storage.GaugeCollection, error) {
 	req := `SELECT name, value FROM gauge`
-	rows, err := p.db.Query(context.Background(), req)
-	if err != nil {
-		logger.Log.Error("error while sending request to db")
-		return nil, err
-	}
 
-	list := make(storage.GaugeCollection, 0)
-	for rows.Next() {
-		var name string
-		var val sql.NullFloat64
-		err = rows.Scan(&name, &val)
+	var list storage.GaugeCollection
+	err := common.Retry(func() error {
+		rows, err := p.db.Query(context.Background(), req)
+		defer rows.Close()
 		if err != nil {
-			logger.Log.Error(err.Error())
-			return nil, err
+			logger.Log.Error("error while sending request to db")
+			return err
 		}
 
-		if !val.Valid {
-			return nil, fmt.Errorf("error while validate value")
+		list = make(storage.GaugeCollection, 0)
+		for rows.Next() {
+			var name string
+			var val sql.NullFloat64
+			err = rows.Scan(&name, &val)
+			if err != nil {
+				logger.Log.Error(err.Error())
+				return err
+			}
+
+			if !val.Valid {
+				return fmt.Errorf("error while validate value")
+			}
+
+			list[name] = storage.Gauge(val.Float64)
 		}
 
-		list[name] = storage.Gauge(val.Float64)
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 	return list, nil
 }
 
 func (p Postgres) GetGaugeByName(name string) (storage.Gauge, error) {
 	req := `SELECT value FROM gauge WHERE name=$1 LIMIT 1`
-	row := p.db.QueryRow(context.Background(), req, name)
 
 	var val sql.NullFloat64
-	row.Scan(&val)
+	err := common.Retry(func() error {
+		row := p.db.QueryRow(context.Background(), req, name)
 
-	if !val.Valid {
-		logger.Log.Error("error while validate gauge value from db")
-		return 0, fmt.Errorf("error while validate gauge value from db")
+		err := row.Scan(&val)
+		if err != nil {
+			return err
+		}
+
+		if !val.Valid {
+			logger.Log.Error("error while validate gauge value from db")
+			return fmt.Errorf("error while validate gauge value from db")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
 	}
 
 	return storage.Gauge(val.Float64), nil
@@ -219,21 +296,33 @@ func (p Postgres) GetGaugeByName(name string) (storage.Gauge, error) {
 
 func (p Postgres) GetCounterByName(name string) (storage.Counter, error) {
 	req := `SELECT value FROM counter WHERE name=$1 LIMIT 1`
-	row := p.db.QueryRow(context.Background(), req, name)
 
 	var val sql.NullInt64
-	row.Scan(&val)
+	err := common.Retry(func() error {
+		row := p.db.QueryRow(context.Background(), req, name)
 
-	if !val.Valid {
-		logger.Log.Error("error while validate counter value from db")
-		return 0, fmt.Errorf("error while validate counter value from db")
+		err := row.Scan(&val)
+		if err != nil {
+			return err
+		}
+
+		if !val.Valid {
+			logger.Log.Error("error while validate counter value from db")
+			return fmt.Errorf("error while validate counter value from db")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
 	}
 
 	return storage.Counter(val.Int64), nil
 }
 
 func (p Postgres) GetAll() (storage.Database, error) {
-	gaugeList, err := p.GetAllGouge()
+	gaugeList, err := p.GetAllGauge()
 	if err != nil {
 		logger.Log.Error(err.Error())
 		return storage.Database{}, err
@@ -253,7 +342,14 @@ func (p Postgres) GetAll() (storage.Database, error) {
 
 func (p Postgres) Ping() error {
 	if p.db != nil {
-		return p.db.Ping(context.Background())
+		return common.Retry(func() error {
+			err := p.db.Ping(context.Background())
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 	} else {
 		return fmt.Errorf("db is not connected")
 	}

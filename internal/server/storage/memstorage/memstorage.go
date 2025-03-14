@@ -48,7 +48,7 @@ func (s *MemStorage) GetAllCounter() (storage.CounterCollection, error) {
 	return collection, nil
 }
 
-func (s *MemStorage) GetAllGouge() (storage.GaugeCollection, error) {
+func (s *MemStorage) GetAllGauge() (storage.GaugeCollection, error) {
 	collection := s.db.Gauge
 	return collection, nil
 }

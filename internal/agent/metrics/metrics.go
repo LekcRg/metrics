@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/LekcRg/metrics/internal/cgzip"
+	"github.com/LekcRg/metrics/internal/common"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -24,7 +25,12 @@ func postRequest(url string, body []byte) {
 
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	var resp *http.Response
+	err = common.Retry(func() error {
+		resp, err = client.Do(req)
+
+		return err
+	})
 	if err != nil {
 		logger.Log.Error("Error making http request")
 		return
@@ -85,6 +91,7 @@ func sendAllMetrics(monitor *map[string]float64, baseURL string, countSent *int)
 }
 
 func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, interval int, addr string, https bool) {
+	defer wg.Done()
 	baseURL := addr + "/updates/"
 	if https {
 		baseURL = "https://" + baseURL
@@ -96,11 +103,11 @@ func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]f
 	sendAllMetrics(monitor, baseURL, &countSent)
 
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			logger.Log.Info("Stop send metrics")
-			wg.Done()
 			return
 		case <-ticker.C:
 			sendAllMetrics(monitor, baseURL, &countSent)

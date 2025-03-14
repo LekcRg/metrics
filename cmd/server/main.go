@@ -26,13 +26,17 @@ func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db
 	<-sigChan
 	cancel()
 
-	err := store.Save()
-	if err != nil {
-		logger.Log.Error("Error while saving store")
+	if store != nil {
+		err := store.Save()
+		if err != nil {
+			logger.Log.Error("Error while saving store")
+		}
 	}
 	db.Close()
-	if err := server.Close(); err != nil {
-		logger.Log.Error("HTTP close error")
+	if server != nil {
+		if err := server.Close(); err != nil {
+			logger.Log.Error("HTTP close error")
+		}
 	}
 }
 
