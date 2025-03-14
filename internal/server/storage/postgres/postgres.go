@@ -57,7 +57,7 @@ func NewPostgres(config config.ServerConfig) (*Postgres, error) {
 	err = common.Retry(func() error {
 		_, err = conn.Exec(ctx, `create table if not exists counter(
 		name text not null unique PRIMARY KEY,
-		value int not null,
+		value bigint not null,
 		created_at timestamp with time zone not null default now()
 		);`)
 
@@ -196,11 +196,11 @@ func (p Postgres) GetAllCounter() (storage.CounterCollection, error) {
 	var list storage.CounterCollection
 	err := common.Retry(func() error {
 		rows, err := p.db.Query(context.Background(), req)
-		defer rows.Close()
 		if err != nil {
 			logger.Log.Error("error while sending request to db")
 			return err
 		}
+		defer rows.Close()
 
 		list = make(storage.CounterCollection, 0)
 		for rows.Next() {
@@ -235,11 +235,11 @@ func (p Postgres) GetAllGauge() (storage.GaugeCollection, error) {
 	var list storage.GaugeCollection
 	err := common.Retry(func() error {
 		rows, err := p.db.Query(context.Background(), req)
-		defer rows.Close()
 		if err != nil {
 			logger.Log.Error("error while sending request to db")
 			return err
 		}
+		defer rows.Close()
 
 		list = make(storage.GaugeCollection, 0)
 		for rows.Next() {
@@ -252,7 +252,8 @@ func (p Postgres) GetAllGauge() (storage.GaugeCollection, error) {
 			}
 
 			if !val.Valid {
-				return fmt.Errorf("error while validate value")
+				logger.Log.Info("found null element")
+				return fmt.Errorf("not found")
 			}
 
 			list[name] = storage.Gauge(val.Float64)
@@ -280,8 +281,8 @@ func (p Postgres) GetGaugeByName(name string) (storage.Gauge, error) {
 		}
 
 		if !val.Valid {
-			logger.Log.Error("error while validate gauge value from db")
-			return fmt.Errorf("error while validate gauge value from db")
+			logger.Log.Info("found null element")
+			return fmt.Errorf("not found")
 		}
 
 		return nil

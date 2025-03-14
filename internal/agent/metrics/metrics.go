@@ -20,22 +20,36 @@ import (
 func postRequest(url string, body []byte) {
 	req, err := cgzip.GetGzippedReq(url, body)
 	if err != nil {
-		logger.Log.Error("Error while geting gzipped request")
+		logger.Log.Error("Error while getting gzipped request")
+		return
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	var resp *http.Response
+
 	err = common.Retry(func() error {
 		resp, err = client.Do(req)
+		if err != nil {
+			return err
+		}
 
-		return err
+		defer func() {
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}()
+		return nil
 	})
+
 	if err != nil {
 		logger.Log.Error("Error making http request")
 		return
 	}
-	defer resp.Body.Close()
+
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 
 	if resp.StatusCode > 299 {
 		logger.Log.Warn("Server answered with status code: " + strconv.Itoa(resp.StatusCode))
