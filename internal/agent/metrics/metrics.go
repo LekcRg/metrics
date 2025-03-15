@@ -1,14 +1,17 @@
 package metrics
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/LekcRg/metrics/internal/cgzip"
+	"github.com/LekcRg/metrics/internal/common"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -17,35 +20,44 @@ import (
 func postRequest(url string, body []byte) {
 	req, err := cgzip.GetGzippedReq(url, body)
 	if err != nil {
-		logger.Log.Error("Error while geting gzipped request")
+		logger.Log.Error("Error while getting gzipped request")
+		return
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	var resp *http.Response
+
+	err = common.Retry(func() error {
+		resp, err = client.Do(req)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if resp != nil {
+				resp.Body.Close()
+			}
+		}()
+		return nil
+	})
+
 	if err != nil {
 		logger.Log.Error("Error making http request")
 		return
 	}
-	defer resp.Body.Close()
+
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 
 	if resp.StatusCode > 299 {
 		logger.Log.Warn("Server answered with status code: " + strconv.Itoa(resp.StatusCode))
 	}
 }
 
-func sendMetric(
-	mType string, name string,
-	value *storage.Gauge, delta *storage.Counter,
-	baseURL string,
-) {
-	body := models.Metrics{
-		ID:    name,
-		MType: mType,
-		Value: value,
-		Delta: delta,
-	}
-	jsonBody, err := json.Marshal(body)
+func sendMetrics(list []models.Metrics, baseURL string) {
+	jsonBody, err := json.Marshal(list)
 	if err != nil {
 		fmt.Println()
 	}
@@ -60,8 +72,41 @@ func getRandomValue() storage.Gauge {
 	return randomValueLeft + randomValueRight
 }
 
-func StartSending(monitor *map[string]float64, interval int, addr string, https bool) {
-	baseURL := addr + "/update"
+func generateJSON(
+	mType string, name string, value *storage.Gauge, delta *storage.Counter,
+) models.Metrics {
+	return models.Metrics{
+		MType: mType,
+		ID:    name,
+		Value: value,
+		Delta: delta,
+	}
+}
+
+func sendAllMetrics(monitor *map[string]float64, baseURL string, countSent *int) {
+	*countSent++
+	countRequests := 1
+	list := []models.Metrics{}
+	pollCountVal := storage.Counter(0)
+	for key, value := range *monitor {
+		countRequests++
+		sendVal := storage.Gauge(value)
+		list = append(list, generateJSON("gauge", key, &sendVal, nil))
+		pollCountVal++
+	}
+
+	randomVal := getRandomValue()
+	list = append(list, generateJSON("gauge", "RandomValue", &randomVal, nil))
+	list = append(list, generateJSON("counter", "PollCount", nil, &pollCountVal))
+
+	sendMetrics(list, baseURL)
+
+	logger.Log.Info(strconv.Itoa(*countSent) + " time sent. Now was " + strconv.Itoa(countRequests) + " requests")
+}
+
+func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, interval int, addr string, https bool) {
+	defer wg.Done()
+	baseURL := addr + "/updates/"
 	if https {
 		baseURL = "https://" + baseURL
 	} else {
@@ -69,20 +114,17 @@ func StartSending(monitor *map[string]float64, interval int, addr string, https 
 	}
 
 	countSent := 0
-	randomVal := getRandomValue()
-	sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
-	for {
-		countSent++
-		for key, value := range *monitor {
-			sendVal := storage.Gauge(value)
-			sendMetric("gauge", key, &sendVal, nil, baseURL)
-			pollCountVal := storage.Counter(1)
-			sendMetric("counter", "PollCount", nil, &pollCountVal, baseURL)
-		}
+	sendAllMetrics(monitor, baseURL, &countSent)
 
-		randomVal := getRandomValue()
-		sendMetric("gauge", "RandomValue", &randomVal, nil, baseURL)
-		logger.Log.Info(strconv.Itoa(countSent) + " time sent")
-		time.Sleep(time.Duration(interval) * time.Second)
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Log.Info("Stop send metrics")
+			return
+		case <-ticker.C:
+			sendAllMetrics(monitor, baseURL, &countSent)
+		}
 	}
 }

@@ -2,15 +2,16 @@ package value
 
 import (
 	"encoding/json"
-	"github.com/LekcRg/metrics/internal/models"
 	"io"
 	"net/http"
 
+	"github.com/LekcRg/metrics/internal/models"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
+
 	"github.com/LekcRg/metrics/internal/logger"
-	"github.com/LekcRg/metrics/internal/server/services"
 )
 
-func Post(s services.MetricService) http.HandlerFunc {
+func Post(s metric.MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := io.ReadAll(r.Body)

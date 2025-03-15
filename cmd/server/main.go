@@ -1,62 +1,102 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
+	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
-	"github.com/LekcRg/metrics/internal/server/services"
-	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
-	"github.com/LekcRg/metrics/internal/server/store"
-
 	"github.com/LekcRg/metrics/internal/server/router"
+	"github.com/LekcRg/metrics/internal/server/services/dbping"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
+	"github.com/LekcRg/metrics/internal/server/services/store"
+	"github.com/LekcRg/metrics/internal/server/storage"
+	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
+	"github.com/LekcRg/metrics/internal/server/storage/postgres"
 )
 
+func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage) {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+	cancel()
+
+	if store != nil {
+		err := store.Save()
+		if err != nil {
+			logger.Log.Error("Error while saving store")
+		}
+	}
+	db.Close()
+	if server != nil {
+		if err := server.Close(); err != nil {
+			logger.Log.Error("HTTP close error")
+		}
+	}
+}
+
 func main() {
-	parseFlags()
+	config := config.LoadServerCfg()
+	logger.Initialize(config.LogLvl, config.IsDev)
+	cfgString := fmt.Sprintf("%+v\n", config)
+	logger.Log.Info(cfgString)
 
-	logger.Initialize(logLvl, isDev)
+	var db storage.Storage
+	var err error
 
-	logger.Log.Info("Create storage")
-	storage, err := memstorage.New()
+	if config.DatabaseDSN != "" {
+		logger.Log.Info("create pg storage")
+		db, err = postgres.NewPostgres(config)
+	} else {
+		logger.Log.Info("Create memstorage")
+		db, err = memstorage.New()
+	}
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}
 
+	logger.Log.Info("Create dbping service")
+	ping := dbping.NewPing(db, config)
+
+	logger.Log.Info("Create store service")
+	store := store.NewStore(db, config)
+
 	logger.Log.Info("Create metric service")
-	updateService := services.NewMetricsService(storage)
+	metricService := metric.NewMetricsService(db, config, store)
 
 	logger.Log.Info("Create router")
-	router := router.NewRouter(updateService)
+	router := router.NewRouter(*metricService, *ping)
 
-	logger.Log.Info("Start saving store")
-
-	if restore {
-		store.Restore(updateService, fileStoragePath)
+	if config.Restore {
+		store.Restore()
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go store.StartSaving(updateService, storeInterval, fileStoragePath)
+	if !config.SyncSave && config.StoreInterval > 0 {
+		wg.Add(1)
+		logger.Log.Info("Start saving store")
+		go store.StartSaving(ctx, &wg)
+	}
 
 	server := &http.Server{
-		Addr:    addrFlag,
+		Addr:    config.Addr,
 		Handler: router,
 	}
 
-	go func() {
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		<-sigChan
-
-		store.Save(updateService, fileStoragePath)
-		if err := server.Close(); err != nil {
-			logger.Log.Fatal("HTTP close error")
-		}
-	}()
+	go exit(cancel, server, store, db)
 
 	err = server.ListenAndServe()
-	logger.Log.Fatal(err.Error())
+	if err != http.ErrServerClosed {
+		logger.Log.Error(err.Error())
+	}
+
+	wg.Wait()
+	logger.Log.Info("Buy, 👋!")
 }

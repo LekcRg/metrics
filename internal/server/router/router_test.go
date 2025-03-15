@@ -5,16 +5,22 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/server/services"
+	"github.com/LekcRg/metrics/internal/server/services/dbping"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
+	"github.com/LekcRg/metrics/internal/server/services/store"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
+	"github.com/LekcRg/metrics/internal/testdata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewRouter(t *testing.T) {
-	routerStorage, _ := memstorage.New()
-	updateService := services.NewMetricsService(routerStorage)
-	r := NewRouter(updateService)
+	storage, _ := memstorage.New()
+	config := testdata.TestServerConfig
+	store := store.NewStore(storage, config)
+	updateService := metric.NewMetricsService(storage, config, store)
+	pingService := dbping.NewPing(storage, config)
+	r := NewRouter(*updateService, *pingService)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -49,5 +55,4 @@ func TestNewRouter(t *testing.T) {
 			resp.Body.Close()
 		})
 	}
-
 }

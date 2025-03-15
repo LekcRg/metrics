@@ -31,12 +31,24 @@ func (s *MemStorage) UpdateGauge(name string, value storage.Gauge) (storage.Gaug
 	return s.db.Gauge[name], nil
 }
 
+func (s *MemStorage) UpdateMany(list storage.Database) error {
+	for key, item := range list.Gauge {
+		s.db.Gauge[key] = item
+	}
+
+	for key, item := range list.Counter {
+		s.db.Counter[key] += item
+	}
+
+	return nil
+}
+
 func (s *MemStorage) GetAllCounter() (storage.CounterCollection, error) {
 	collection := s.db.Counter
 	return collection, nil
 }
 
-func (s *MemStorage) GetAllGouge() (storage.GaugeCollection, error) {
+func (s *MemStorage) GetAllGauge() (storage.GaugeCollection, error) {
 	collection := s.db.Gauge
 	return collection, nil
 }
@@ -61,16 +73,10 @@ func (s *MemStorage) GetAll() (storage.Database, error) {
 	return *s.db, nil
 }
 
-func (s *MemStorage) SaveManyGauge(gauges storage.GaugeCollection) error {
-	for key, item := range gauges {
-		s.db.Gauge[key] = item
-	}
+func (s *MemStorage) Ping() error {
 	return nil
 }
 
-func (s *MemStorage) SaveManyCounter(counters storage.CounterCollection) error {
-	for key, item := range counters {
-		s.db.Counter[key] = item
-	}
-	return nil
+func (s MemStorage) Close() {
+	//
 }

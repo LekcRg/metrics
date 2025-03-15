@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/server/services"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func Post(s services.MetricService) http.HandlerFunc {
+func Post(s metric.MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 

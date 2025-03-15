@@ -5,8 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/server/services"
+	"github.com/LekcRg/metrics/internal/server/services/metric"
+	"github.com/LekcRg/metrics/internal/server/services/store"
 	"github.com/LekcRg/metrics/internal/server/storage/memstorage"
+	"github.com/LekcRg/metrics/internal/testdata"
 
 	"github.com/go-chi/chi/v5"
 
@@ -15,10 +17,12 @@ import (
 )
 
 func TestUpdateRoutes(t *testing.T) {
-	updateStorage, _ := memstorage.New()
-	updateService := services.NewMetricsService(updateStorage)
+	storage, _ := memstorage.New()
+	config := testdata.TestServerConfig
+	store := store.NewStore(storage, config)
+	updateService := metric.NewMetricsService(storage, config, store)
 	r := chi.NewRouter()
-	UpdateRoutes(r, updateService)
+	UpdateRoutes(r, *updateService)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -92,14 +96,6 @@ func TestUpdateRoutes(t *testing.T) {
 			url:  "/update/gauge",
 			want: want{
 				code:        http.StatusNotFound,
-				contentType: "text/plain; charset=utf-8",
-			},
-		},
-		{
-			name: "#9[POST] Negative request without params",
-			url:  "/update",
-			want: want{
-				code:        http.StatusBadRequest,
 				contentType: "text/plain; charset=utf-8",
 			},
 		},
