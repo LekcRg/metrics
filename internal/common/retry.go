@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func Retry(rfunc func() error) error {
+func Retry(ctx context.Context, rfunc func() error) error {
 	timeouts := []int{1, 3, 5}
 	var err error
 	for i := range 4 {
@@ -32,16 +32,21 @@ func Retry(rfunc func() error) error {
 					pgErr.Code == pgerrcode.DeadlockDetected ||
 					pgerrcode.IsConnectionException(pgErr.Code))))
 
-		fmt.Println("isRetryable")
-		fmt.Println(isRetryable)
-
 		if !isRetryable || i == 3 {
 			return err
 		}
 
 		logText := fmt.Sprintf("repeat attempt %d after %d seconds", i+1, timeouts[i])
 		logger.Log.Warn(logText)
-		time.Sleep(time.Duration(timeouts[i]) * time.Second)
+
+		timer := time.NewTimer(time.Duration(timeouts[i]) * time.Second)
+
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return fmt.Errorf("stopped")
+		case <-timer.C:
+		}
 	}
 
 	return err

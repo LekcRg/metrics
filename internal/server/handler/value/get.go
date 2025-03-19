@@ -14,7 +14,7 @@ func Get(s metric.MetricService) http.HandlerFunc {
 		reqType := chi.URLParam(r, "type")
 		reqName := chi.URLParam(r, "name")
 
-		res, err := s.GetMetric(reqName, reqType)
+		res, err := s.GetMetric(r.Context(), reqName, reqType)
 
 		if err != nil {
 			http.Error(w, "Not found", http.StatusNotFound)

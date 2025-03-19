@@ -25,8 +25,8 @@ func NewStore(storage storage.Storage, cfg config.ServerConfig) *Store {
 	}
 }
 
-func (s Store) Save() error {
-	metrics, err := s.db.GetAll()
+func (s Store) Save(ctx context.Context) error {
+	metrics, err := s.db.GetAll(ctx)
 	if err != nil {
 		logger.Log.Error("Error while getting all metrics from storage")
 		return err
@@ -64,7 +64,7 @@ func (s Store) StartSaving(ctx context.Context, wg *sync.WaitGroup) {
 			wg.Done()
 			return
 		case <-ticker.C:
-			err := s.Save()
+			err := s.Save(ctx)
 			if err != nil {
 				logger.Log.Error("Error while save")
 			}
@@ -72,7 +72,7 @@ func (s Store) StartSaving(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (s Store) Restore() error {
+func (s Store) Restore(ctx context.Context) error {
 	if s.cfg.DatabaseDSN != "" {
 		return fmt.Errorf("postgres doesn't support restore from file")
 	}
@@ -87,7 +87,7 @@ func (s Store) Restore() error {
 		return err
 	}
 
-	s.db.UpdateMany(storage)
+	s.db.UpdateMany(ctx, storage)
 
 	logger.Log.Info("Success restore data from file " + s.cfg.FileStoragePath)
 

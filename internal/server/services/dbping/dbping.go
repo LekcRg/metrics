@@ -1,13 +1,11 @@
 package dbping
 
 import (
+	"context"
+
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
-
-type db interface {
-	Ping() error
-}
 
 type PingService struct {
 	cfg config.ServerConfig
@@ -21,6 +19,6 @@ func NewPing(storage storage.Storage, cfg config.ServerConfig) *PingService {
 	}
 }
 
-func (p PingService) Ping() error {
-	return p.db.Ping()
+func (p PingService) Ping(ctx context.Context) error {
+	return p.db.Ping(ctx)
 }

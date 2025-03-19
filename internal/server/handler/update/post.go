@@ -27,7 +27,7 @@ func Post(s metric.MetricService) http.HandlerFunc {
 		reqName := chi.URLParam(r, "name")
 		reqValue := chi.URLParam(r, "value")
 
-		err := s.UpdateMetric(reqName, reqType, reqValue)
+		err := s.UpdateMetric(r.Context(), reqName, reqType, reqValue)
 		if err != nil {
 			textErr := fmt.Sprintf("Bad request: %s", err)
 			http.Error(w, textErr, http.StatusBadRequest)

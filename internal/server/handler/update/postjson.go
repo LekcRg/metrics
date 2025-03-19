@@ -41,7 +41,7 @@ func PostJSON(s metric.MetricService) http.HandlerFunc {
 			return
 		}
 
-		newMetric, err := s.UpdateMetricJSON(parsedBody)
+		newMetric, err := s.UpdateMetricJSON(r.Context(), parsedBody)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -77,7 +77,7 @@ func PostMany(s metric.MetricService) http.HandlerFunc {
 			return
 		}
 
-		err = s.UpdateMany(parsedBody)
+		err = s.UpdateMany(r.Context(), parsedBody)
 		if err != nil {
 			logger.Log.Error(err.Error())
 			http.Error(w, "Internal server error", http.StatusInternalServerError)

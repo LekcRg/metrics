@@ -9,7 +9,7 @@ import (
 
 func Ping(p dbping.PingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := p.Ping()
+		err := p.Ping(r.Context())
 		if err != nil {
 			http.Error(w, "Internal error 500", http.StatusInternalServerError)
 			return

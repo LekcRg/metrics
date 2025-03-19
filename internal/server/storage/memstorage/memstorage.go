@@ -1,6 +1,7 @@
 package memstorage
 
 import (
+	"context"
 	"errors"
 
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -19,19 +20,19 @@ func New() (*MemStorage, error) {
 	}, nil
 }
 
-func (s *MemStorage) UpdateCounter(name string, value storage.Counter) (storage.Counter, error) {
+func (s *MemStorage) UpdateCounter(_ context.Context, name string, value storage.Counter) (storage.Counter, error) {
 	s.db.Counter[name] += value
 
 	return s.db.Counter[name], nil
 }
 
-func (s *MemStorage) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, error) {
+func (s *MemStorage) UpdateGauge(_ context.Context, name string, value storage.Gauge) (storage.Gauge, error) {
 	s.db.Gauge[name] = value
 
 	return s.db.Gauge[name], nil
 }
 
-func (s *MemStorage) UpdateMany(list storage.Database) error {
+func (s *MemStorage) UpdateMany(_ context.Context, list storage.Database) error {
 	for key, item := range list.Gauge {
 		s.db.Gauge[key] = item
 	}
@@ -43,17 +44,17 @@ func (s *MemStorage) UpdateMany(list storage.Database) error {
 	return nil
 }
 
-func (s *MemStorage) GetAllCounter() (storage.CounterCollection, error) {
+func (s *MemStorage) GetAllCounter(_ context.Context) (storage.CounterCollection, error) {
 	collection := s.db.Counter
 	return collection, nil
 }
 
-func (s *MemStorage) GetAllGauge() (storage.GaugeCollection, error) {
+func (s *MemStorage) GetAllGauge(_ context.Context) (storage.GaugeCollection, error) {
 	collection := s.db.Gauge
 	return collection, nil
 }
 
-func (s *MemStorage) GetGaugeByName(name string) (storage.Gauge, error) {
+func (s *MemStorage) GetGaugeByName(_ context.Context, name string) (storage.Gauge, error) {
 	if val, ok := s.db.Gauge[name]; ok {
 		return val, nil
 	}
@@ -61,7 +62,7 @@ func (s *MemStorage) GetGaugeByName(name string) (storage.Gauge, error) {
 	return 0, errors.New("not found")
 }
 
-func (s *MemStorage) GetCounterByName(name string) (storage.Counter, error) {
+func (s *MemStorage) GetCounterByName(_ context.Context, name string) (storage.Counter, error) {
 	if val, ok := s.db.Counter[name]; ok {
 		return val, nil
 	}
@@ -69,11 +70,11 @@ func (s *MemStorage) GetCounterByName(name string) (storage.Counter, error) {
 	return 0, errors.New("not found")
 }
 
-func (s *MemStorage) GetAll() (storage.Database, error) {
+func (s *MemStorage) GetAll(_ context.Context) (storage.Database, error) {
 	return *s.db, nil
 }
 
-func (s *MemStorage) Ping() error {
+func (s *MemStorage) Ping(_ context.Context) error {
 	return nil
 }
 
