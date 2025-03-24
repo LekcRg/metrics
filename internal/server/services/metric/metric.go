@@ -11,14 +11,14 @@ type Store interface {
 }
 
 type MetricService struct {
-	config config.ServerConfig
+	Config config.ServerConfig
 	db     storage.Storage
 	store  *store.Store
 }
 
 func NewMetricsService(db storage.Storage, config config.ServerConfig, store *store.Store) *MetricService {
 	return &MetricService{
-		config: config,
+		Config: config,
 		db:     db,
 		store:  store,
 	}

@@ -12,16 +12,22 @@ import (
 
 	"github.com/LekcRg/metrics/internal/cgzip"
 	"github.com/LekcRg/metrics/internal/common"
+	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-func postRequest(ctx context.Context, url string, body []byte) error {
+func postRequest(ctx context.Context, url string, body []byte, key string) error {
 	req, err := cgzip.GetGzippedReq(url, body)
 	if err != nil {
 		logger.Log.Error("Error while getting gzipped request")
 		return err
+	}
+
+	if key != "" {
+		sha := common.GenerateSHA256(body, key)
+		req.Header.Set("HashSHA256", sha)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -55,13 +61,13 @@ func postRequest(ctx context.Context, url string, body []byte) error {
 	return nil
 }
 
-func sendMetrics(ctx context.Context, list []models.Metrics, baseURL string) error {
+func sendMetrics(ctx context.Context, list []models.Metrics, baseURL string, key string) error {
 	jsonBody, err := json.Marshal(list)
 	if err != nil {
 		return err
 	}
 
-	return postRequest(ctx, baseURL, jsonBody)
+	return postRequest(ctx, baseURL, jsonBody, key)
 }
 
 func getRandomValue() storage.Gauge {
@@ -82,7 +88,7 @@ func generateJSON(
 	}
 }
 
-func sendAllMetrics(ctx context.Context, monitor *map[string]float64, baseURL string, countSent *int) {
+func sendAllMetrics(ctx context.Context, monitor *map[string]float64, baseURL string, countSent *int, key string) {
 	*countSent++
 	countRequests := 1
 	list := []models.Metrics{}
@@ -98,7 +104,7 @@ func sendAllMetrics(ctx context.Context, monitor *map[string]float64, baseURL st
 	list = append(list, generateJSON("gauge", "RandomValue", &randomVal, nil))
 	list = append(list, generateJSON("counter", "PollCount", nil, &pollCountVal))
 
-	err := sendMetrics(ctx, list, baseURL)
+	err := sendMetrics(ctx, list, baseURL, key)
 
 	if err != nil {
 		*countSent--
@@ -107,19 +113,19 @@ func sendAllMetrics(ctx context.Context, monitor *map[string]float64, baseURL st
 	logger.Log.Info(strconv.Itoa(*countSent) + " time sent. Now was " + strconv.Itoa(countRequests) + " requests")
 }
 
-func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, interval int, addr string, https bool) {
+func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]float64, config config.AgentConfig) {
 	defer wg.Done()
-	baseURL := addr + "/updates/"
-	if https {
+	baseURL := config.Addr + "/updates/"
+	if config.IsHTTPS {
 		baseURL = "https://" + baseURL
 	} else {
 		baseURL = "http://" + baseURL
 	}
 
 	countSent := 0
-	sendAllMetrics(ctx, monitor, baseURL, &countSent)
+	sendAllMetrics(ctx, monitor, baseURL, &countSent, config.Key)
 
-	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	ticker := time.NewTicker(time.Duration(config.ReportInterval) * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
@@ -127,7 +133,7 @@ func StartSending(ctx context.Context, wg *sync.WaitGroup, monitor *map[string]f
 			logger.Log.Info("Stop send metrics")
 			return
 		case <-ticker.C:
-			sendAllMetrics(ctx, monitor, baseURL, &countSent)
+			sendAllMetrics(ctx, monitor, baseURL, &countSent, config.Key)
 		}
 	}
 }

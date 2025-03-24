@@ -2,6 +2,9 @@ package common
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -50,4 +53,12 @@ func Retry(ctx context.Context, rfunc func() error) error {
 	}
 
 	return err
+}
+
+func GenerateSHA256(content []byte, key string) string {
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write(content)
+	dst := h.Sum(nil)
+
+	return hex.EncodeToString(dst)
 }

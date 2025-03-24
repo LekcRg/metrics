@@ -40,7 +40,7 @@ func main() {
 	<-readySignal
 
 	logger.Log.Info("Start sending metrics")
-	go metrics.StartSending(ctx, &wg, &monitor, config.ReportInterval, config.Addr, config.IsHTTPS)
+	go metrics.StartSending(ctx, &wg, &monitor, config)
 	go exit(cancel)
 	wg.Wait()
 	logger.Log.Info("Buy, 👋!")

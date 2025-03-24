@@ -17,6 +17,7 @@ const defaultReportInterval = 10
 const defaultPollInterval = 2
 const defaultHTTPS = false
 const defaultDatabaseDSN = ""
+const defaultKey = ""
 
 // const defaultDatabaseDSN = "postgresql://postgres:postgres@localhost:5432/metrics"
 
@@ -24,6 +25,7 @@ type CommonConfig struct {
 	Addr   string `env:"ADDRESS"`
 	LogLvl string `env:"LOG_LVL"`
 	IsDev  bool   `env:"IS_DEV"`
+	Key    string `env:"KEY"`
 }
 
 type ServerConfig struct {
@@ -45,6 +47,7 @@ type AgentConfig struct {
 func loadCommonCfg(cfg *CommonConfig) error {
 	flag.StringVar(&cfg.Addr, "a", defaultAddr, "address for run server")
 	flag.StringVar(&cfg.LogLvl, "l", defaultLogLvl, "logging level")
+	flag.StringVar(&cfg.Key, "k", defaultKey, "key for SHA256")
 	flag.BoolVar(&cfg.IsDev, "dev", defaultIsDev, "is development")
 	flag.Parse()
 
@@ -61,12 +64,17 @@ func loadCommonCfg(cfg *CommonConfig) error {
 		cfg.LogLvl = envVars.LogLvl
 	}
 
+	if envVars.Key != "" {
+		cfg.Key = envVars.Key
+	}
+
 	if envVars.IsDev {
 		cfg.IsDev = envVars.IsDev
 	}
 
 	return nil
 }
+
 func LoadServerCfg() ServerConfig {
 	var cfg = ServerConfig{}
 

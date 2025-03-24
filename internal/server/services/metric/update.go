@@ -27,7 +27,7 @@ func (s *MetricService) UpdateMetric(ctx context.Context, reqName string, reqTyp
 		return fmt.Errorf("incorrect type. type must be a counter or a gauge")
 	}
 
-	if s.config.SyncSave {
+	if s.Config.SyncSave {
 		err := s.store.Save(ctx)
 		if err != nil {
 			logger.Log.Error("Error while saving store")
@@ -60,7 +60,7 @@ func (s *MetricService) HandleGaugeUpdate(ctx context.Context, json models.Metri
 		return models.Metrics{}, fmt.Errorf("can'not get new value")
 	}
 
-	if s.config.SyncSave {
+	if s.Config.SyncSave {
 		err := s.store.Save(ctx)
 		if err != nil {
 			logger.Log.Error("Error while saving store")
