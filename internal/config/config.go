@@ -18,8 +18,7 @@ const defaultPollInterval = 2
 const defaultHTTPS = false
 const defaultDatabaseDSN = ""
 const defaultKey = ""
-
-// const defaultDatabaseDSN = "postgresql://postgres:postgres@localhost:5432/metrics"
+const defaultRateLimit = 5
 
 type CommonConfig struct {
 	Addr   string `env:"ADDRESS"`
@@ -41,12 +40,13 @@ type AgentConfig struct {
 	CommonConfig
 	ReportInterval int  `env:"REPORT_INTERVAL"`
 	PollInterval   int  `env:"POLL_INTERVAL"`
+	RateLimit      int  `env:"RATE_LIMIT"`
 	IsHTTPS        bool `env:"IS_HTTPS"`
 }
 
 func loadCommonCfg(cfg *CommonConfig) error {
 	flag.StringVar(&cfg.Addr, "a", defaultAddr, "address for run server")
-	flag.StringVar(&cfg.LogLvl, "l", defaultLogLvl, "logging level")
+	flag.StringVar(&cfg.LogLvl, "log", defaultLogLvl, "logging level")
 	flag.StringVar(&cfg.Key, "k", defaultKey, "key for SHA256")
 	flag.BoolVar(&cfg.IsDev, "dev", defaultIsDev, "is development")
 	flag.Parse()
@@ -124,6 +124,7 @@ func LoadAgentCfg() AgentConfig {
 
 	flag.IntVar(&cfg.ReportInterval, "r", defaultReportInterval, "interval for sending runtime metrics")
 	flag.IntVar(&cfg.PollInterval, "p", defaultPollInterval, "interval for getting runtime metrics")
+	flag.IntVar(&cfg.RateLimit, "l", defaultRateLimit, "rate limit requests")
 	flag.BoolVar(&cfg.IsHTTPS, "s", defaultHTTPS, "https true/false, default false")
 	err := loadCommonCfg(&cfg.CommonConfig)
 	if err != nil {
@@ -143,6 +144,10 @@ func LoadAgentCfg() AgentConfig {
 
 	if envVars.PollInterval != 0 {
 		cfg.PollInterval = envVars.PollInterval
+	}
+
+	if envVars.RateLimit != 0 {
+		cfg.RateLimit = envVars.RateLimit
 	}
 
 	if envVars.IsHTTPS {

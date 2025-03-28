@@ -8,8 +8,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/LekcRg/metrics/internal/agent/metrics"
 	"github.com/LekcRg/metrics/internal/agent/monitoring"
+	"github.com/LekcRg/metrics/internal/agent/sender"
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
 )
@@ -27,20 +27,15 @@ func main() {
 	cfgString := fmt.Sprintf("%+v\n", config)
 	logger.Log.Info(cfgString)
 
-	var monitor map[string]float64
 	var wg sync.WaitGroup
-	wg.Add(2)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	readySignal := make(chan bool)
-	logger.Log.Info("Start get metrics")
-	go monitoring.Start(ctx, &wg, &monitor, config.PollInterval, readySignal)
+	monitor := monitoring.New(config.PollInterval)
+	send := sender.New(config, monitor)
 
-	// wait get monitoring
-	<-readySignal
+	send.Start(ctx, &wg)
+	monitor.Start(ctx, &wg)
 
-	logger.Log.Info("Start sending metrics")
-	go metrics.StartSending(ctx, &wg, &monitor, config)
 	go exit(cancel)
 	wg.Wait()
 	logger.Log.Info("Buy, 👋!")
