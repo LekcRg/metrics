@@ -100,7 +100,7 @@ func generateHTML(gaugeList []string, counterList []string) string {
 
 func Get(s metric.MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		all, err := s.GetAllMetrics()
+		all, err := s.GetAllMetrics(r.Context())
 		if err != nil {
 			http.Error(w, "Internal error 500", http.StatusInternalServerError)
 			return

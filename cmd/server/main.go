@@ -27,7 +27,7 @@ func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db
 	cancel()
 
 	if store != nil {
-		err := store.Save()
+		err := store.Save(context.Background())
 		if err != nil {
 			logger.Log.Error("Error while saving store")
 		}
@@ -49,9 +49,10 @@ func main() {
 	var db storage.Storage
 	var err error
 
+	ctx, cancel := context.WithCancel(context.Background())
 	if config.DatabaseDSN != "" {
 		logger.Log.Info("create pg storage")
-		db, err = postgres.NewPostgres(config)
+		db, err = postgres.NewPostgres(ctx, config)
 	} else {
 		logger.Log.Info("Create memstorage")
 		db, err = memstorage.New()
@@ -73,10 +74,8 @@ func main() {
 	router := router.NewRouter(*metricService, *ping)
 
 	if config.Restore {
-		store.Restore()
+		store.Restore(ctx)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	var wg sync.WaitGroup
 	if !config.SyncSave && config.StoreInterval > 0 {

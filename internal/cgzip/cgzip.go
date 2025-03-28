@@ -3,6 +3,7 @@ package cgzip
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"net/http"
 	"slices"
 	"strings"
@@ -33,10 +34,6 @@ type (
 var toGzip = []string{
 	"application/json",
 	"text/html",
-	// "application/javascript",
-	// "text/css",
-	// "text/plain",
-	// "text/xml",
 }
 
 func (w gzipWriter) Write(b []byte) (int, error) {
@@ -45,8 +42,6 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 		w.headerData.statusCode = http.StatusOK
 	}
 
-	// TODO: Add check for the content-type with utf-8, etc.
-	// Can check len(b) < 1400
 	if !slices.Contains(toGzip, contentType) ||
 		w.headerData.statusCode > 299 {
 		w.ResponseWriter.WriteHeader(w.headerData.statusCode)
@@ -106,8 +101,7 @@ func GzipBody(next http.Handler) http.Handler {
 	})
 }
 
-// add context in the future, idk why)
-func GetGzippedReq(url string, body []byte) (*http.Request, error) {
+func GetGzippedReq(ctx context.Context, url string, body []byte) (*http.Request, error) {
 	var buf bytes.Buffer
 	gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
 	if err != nil {
@@ -125,7 +119,7 @@ func GetGzippedReq(url string, body []byte) (*http.Request, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, &buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &buf)
 	if err != nil {
 		logger.Log.Error("Error creating http request")
 		return nil, err

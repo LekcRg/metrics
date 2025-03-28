@@ -17,16 +17,14 @@ type Postgres struct {
 	db *pgxpool.Pool
 }
 
-// TODO: Add contexts
-
-func NewPostgres(config config.ServerConfig) (*Postgres, error) {
-	conn, err := pgxpool.New(context.Background(), config.DatabaseDSN)
+func NewPostgres(ctx context.Context, config config.ServerConfig) (*Postgres, error) {
+	conn, err := pgxpool.New(ctx, config.DatabaseDSN)
 	if err != nil {
 		return nil, err
 	}
 
-	err = common.Retry(func() error {
-		err = conn.Ping(context.Background())
+	err = common.Retry(ctx, func() error {
+		err = conn.Ping(ctx)
 		if err != nil {
 			return err
 		}
@@ -38,9 +36,7 @@ func NewPostgres(config config.ServerConfig) (*Postgres, error) {
 		return nil, err
 	}
 
-	ctx := context.Background()
-
-	err = common.Retry(func() error {
+	err = common.Retry(ctx, func() error {
 		_, err := conn.Exec(ctx, `create table if not exists gauge(
 		name text not null unique PRIMARY KEY,
 		value double precision not null,
@@ -54,7 +50,7 @@ func NewPostgres(config config.ServerConfig) (*Postgres, error) {
 		return nil, err
 	}
 
-	err = common.Retry(func() error {
+	err = common.Retry(ctx, func() error {
 		_, err = conn.Exec(ctx, `create table if not exists counter(
 		name text not null unique PRIMARY KEY,
 		value bigint not null,
@@ -73,7 +69,7 @@ func NewPostgres(config config.ServerConfig) (*Postgres, error) {
 	}, nil
 }
 
-func (p Postgres) UpdateCounter(name string, value storage.Counter) (storage.Counter, error) {
+func (p Postgres) UpdateCounter(ctx context.Context, name string, value storage.Counter) (storage.Counter, error) {
 	req := `INSERT INTO counter (name, value)
 	VALUES ($1, $2)
 	ON CONFLICT (name) DO UPDATE
@@ -82,8 +78,8 @@ func (p Postgres) UpdateCounter(name string, value storage.Counter) (storage.Cou
 	`
 	var result storage.Counter
 
-	err := common.Retry(func() error {
-		row := p.db.QueryRow(context.Background(), req, name, value)
+	err := common.Retry(ctx, func() error {
+		row := p.db.QueryRow(ctx, req, name, value)
 
 		var val sql.NullInt64
 		err := row.Scan(&val)
@@ -107,7 +103,7 @@ func (p Postgres) UpdateCounter(name string, value storage.Counter) (storage.Cou
 	return result, nil
 }
 
-func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, error) {
+func (p Postgres) UpdateGauge(ctx context.Context, name string, value storage.Gauge) (storage.Gauge, error) {
 	req := `INSERT INTO gauge (name, value)
 	VALUES ($1, $2)
 	ON CONFLICT (name) DO UPDATE
@@ -116,8 +112,8 @@ func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, 
 	`
 	var result storage.Gauge
 
-	err := common.Retry(func() error {
-		row := p.db.QueryRow(context.Background(), req, name, value)
+	err := common.Retry(ctx, func() error {
+		row := p.db.QueryRow(ctx, req, name, value)
 
 		var val sql.NullFloat64
 		err := row.Scan(&val)
@@ -141,7 +137,7 @@ func (p Postgres) UpdateGauge(name string, value storage.Gauge) (storage.Gauge, 
 	return result, nil
 }
 
-func (p Postgres) UpdateMany(list storage.Database) error {
+func (p Postgres) UpdateMany(ctx context.Context, list storage.Database) error {
 	reqCounter := `INSERT INTO counter (name, value)
 	VALUES ($1, $2)
 	ON CONFLICT (name) DO UPDATE
@@ -165,8 +161,7 @@ func (p Postgres) UpdateMany(list storage.Database) error {
 		batch.Queue(reqGauge, key, value)
 	}
 
-	ctx := context.Background()
-	return common.Retry(func() error {
+	return common.Retry(ctx, func() error {
 		tx, err := p.db.BeginTx(ctx, pgx.TxOptions{})
 		if err != nil {
 			return err
@@ -191,11 +186,11 @@ func (p Postgres) UpdateMany(list storage.Database) error {
 	})
 }
 
-func (p Postgres) GetAllCounter() (storage.CounterCollection, error) {
+func (p Postgres) GetAllCounter(ctx context.Context) (storage.CounterCollection, error) {
 	req := `SELECT name, value FROM counter`
 	var list storage.CounterCollection
-	err := common.Retry(func() error {
-		rows, err := p.db.Query(context.Background(), req)
+	err := common.Retry(ctx, func() error {
+		rows, err := p.db.Query(ctx, req)
 		if err != nil {
 			logger.Log.Error("error while sending request to db")
 			return err
@@ -229,12 +224,12 @@ func (p Postgres) GetAllCounter() (storage.CounterCollection, error) {
 	return list, nil
 }
 
-func (p Postgres) GetAllGauge() (storage.GaugeCollection, error) {
+func (p Postgres) GetAllGauge(ctx context.Context) (storage.GaugeCollection, error) {
 	req := `SELECT name, value FROM gauge`
 
 	var list storage.GaugeCollection
-	err := common.Retry(func() error {
-		rows, err := p.db.Query(context.Background(), req)
+	err := common.Retry(ctx, func() error {
+		rows, err := p.db.Query(ctx, req)
 		if err != nil {
 			logger.Log.Error("error while sending request to db")
 			return err
@@ -268,12 +263,12 @@ func (p Postgres) GetAllGauge() (storage.GaugeCollection, error) {
 	return list, nil
 }
 
-func (p Postgres) GetGaugeByName(name string) (storage.Gauge, error) {
+func (p Postgres) GetGaugeByName(ctx context.Context, name string) (storage.Gauge, error) {
 	req := `SELECT value FROM gauge WHERE name=$1 LIMIT 1`
 
 	var val sql.NullFloat64
-	err := common.Retry(func() error {
-		row := p.db.QueryRow(context.Background(), req, name)
+	err := common.Retry(ctx, func() error {
+		row := p.db.QueryRow(ctx, req, name)
 
 		err := row.Scan(&val)
 		if err != nil {
@@ -295,12 +290,12 @@ func (p Postgres) GetGaugeByName(name string) (storage.Gauge, error) {
 	return storage.Gauge(val.Float64), nil
 }
 
-func (p Postgres) GetCounterByName(name string) (storage.Counter, error) {
+func (p Postgres) GetCounterByName(ctx context.Context, name string) (storage.Counter, error) {
 	req := `SELECT value FROM counter WHERE name=$1 LIMIT 1`
 
 	var val sql.NullInt64
-	err := common.Retry(func() error {
-		row := p.db.QueryRow(context.Background(), req, name)
+	err := common.Retry(ctx, func() error {
+		row := p.db.QueryRow(ctx, req, name)
 
 		err := row.Scan(&val)
 		if err != nil {
@@ -322,14 +317,14 @@ func (p Postgres) GetCounterByName(name string) (storage.Counter, error) {
 	return storage.Counter(val.Int64), nil
 }
 
-func (p Postgres) GetAll() (storage.Database, error) {
-	gaugeList, err := p.GetAllGauge()
+func (p Postgres) GetAll(ctx context.Context) (storage.Database, error) {
+	gaugeList, err := p.GetAllGauge(ctx)
 	if err != nil {
 		logger.Log.Error(err.Error())
 		return storage.Database{}, err
 	}
 
-	counterList, err := p.GetAllCounter()
+	counterList, err := p.GetAllCounter(ctx)
 	if err != nil {
 		logger.Log.Error(err.Error())
 		return storage.Database{}, err
@@ -341,10 +336,10 @@ func (p Postgres) GetAll() (storage.Database, error) {
 	}, nil
 }
 
-func (p Postgres) Ping() error {
+func (p Postgres) Ping(ctx context.Context) error {
 	if p.db != nil {
-		return common.Retry(func() error {
-			err := p.db.Ping(context.Background())
+		return common.Retry(ctx, func() error {
+			err := p.db.Ping(ctx)
 			if err != nil {
 				return err
 			}

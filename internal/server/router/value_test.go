@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,10 +28,10 @@ func TestValueRoutes(t *testing.T) {
 	ValueRoutes(r, *updateService)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
-	valueStorage.UpdateGauge("one", storage.Gauge(123.45))
-	valueStorage.UpdateCounter("two", storage.Counter(12345))
-	valueStorage.UpdateGauge("five", storage.Gauge(-123.45))
-	valueStorage.UpdateCounter("six", storage.Counter(-12345))
+	valueStorage.UpdateGauge(context.Background(), "one", storage.Gauge(123.45))
+	valueStorage.UpdateCounter(context.Background(), "two", storage.Counter(12345))
+	valueStorage.UpdateGauge(context.Background(), "five", storage.Gauge(-123.45))
+	valueStorage.UpdateCounter(context.Background(), "six", storage.Counter(-12345))
 
 	type want struct {
 		code        int

@@ -28,7 +28,7 @@ func Post(s metric.MetricService) http.HandlerFunc {
 			return
 		}
 
-		res, err := s.GetMetricJSON(parsedBody)
+		res, err := s.GetMetricJSON(r.Context(), parsedBody)
 		if err != nil {
 			http.Error(w, "Not found", http.StatusNotFound)
 			return

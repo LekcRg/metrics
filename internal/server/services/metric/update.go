@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -9,25 +10,25 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-func (s *MetricService) UpdateMetric(reqName string, reqType string, reqValue string) error {
+func (s *MetricService) UpdateMetric(ctx context.Context, reqName string, reqType string, reqValue string) error {
 	if reqType == "counter" {
 		value, err := strconv.ParseInt(reqValue, 0, 64)
 		if err != nil {
 			return fmt.Errorf("counter value must be int64")
 		}
-		s.db.UpdateCounter(reqName, storage.Counter(value))
+		s.db.UpdateCounter(ctx, reqName, storage.Counter(value))
 	} else if reqType == "gauge" {
 		value, err := strconv.ParseFloat(reqValue, 64)
 		if err != nil {
 			return fmt.Errorf("gauge value must be float64")
 		}
-		s.db.UpdateGauge(reqName, storage.Gauge(value))
+		s.db.UpdateGauge(ctx, reqName, storage.Gauge(value))
 	} else {
 		return fmt.Errorf("incorrect type. type must be a counter or a gauge")
 	}
 
-	if s.config.SyncSave {
-		err := s.store.Save()
+	if s.Config.SyncSave {
+		err := s.store.Save(ctx)
 		if err != nil {
 			logger.Log.Error("Error while saving store")
 		}
@@ -36,8 +37,8 @@ func (s *MetricService) UpdateMetric(reqName string, reqType string, reqValue st
 	return nil
 }
 
-func (s *MetricService) HandleCounterUpdate(json models.Metrics) (models.Metrics, error) {
-	newVal, err := s.db.UpdateCounter(json.ID, storage.Counter(*json.Delta))
+func (s *MetricService) HandleCounterUpdate(ctx context.Context, json models.Metrics) (models.Metrics, error) {
+	newVal, err := s.db.UpdateCounter(ctx, json.ID, storage.Counter(*json.Delta))
 
 	if err != nil {
 		logger.Log.Error("error while getting new counter value")
@@ -51,16 +52,16 @@ func (s *MetricService) HandleCounterUpdate(json models.Metrics) (models.Metrics
 	}, nil
 }
 
-func (s *MetricService) HandleGaugeUpdate(json models.Metrics) (models.Metrics, error) {
-	newVal, err := s.db.UpdateGauge(json.ID, storage.Gauge(*json.Value))
+func (s *MetricService) HandleGaugeUpdate(ctx context.Context, json models.Metrics) (models.Metrics, error) {
+	newVal, err := s.db.UpdateGauge(ctx, json.ID, storage.Gauge(*json.Value))
 
 	if err != nil {
 		logger.Log.Error("error while getting new gauge value")
 		return models.Metrics{}, fmt.Errorf("can'not get new value")
 	}
 
-	if s.config.SyncSave {
-		err := s.store.Save()
+	if s.Config.SyncSave {
+		err := s.store.Save(ctx)
 		if err != nil {
 			logger.Log.Error("Error while saving store")
 		}
@@ -73,18 +74,18 @@ func (s *MetricService) HandleGaugeUpdate(json models.Metrics) (models.Metrics, 
 	}, nil
 }
 
-func (s *MetricService) UpdateMetricJSON(json models.Metrics) (models.Metrics, error) {
+func (s *MetricService) UpdateMetricJSON(ctx context.Context, json models.Metrics) (models.Metrics, error) {
 	switch {
 	case json.MType == "gauge" && json.Value != nil:
-		return s.HandleGaugeUpdate(json)
+		return s.HandleGaugeUpdate(ctx, json)
 	case json.MType == "counter" && json.Delta != nil:
-		return s.HandleCounterUpdate(json)
+		return s.HandleCounterUpdate(ctx, json)
 	default:
 		return models.Metrics{}, fmt.Errorf("invalid type or empty value")
 	}
 }
 
-func (s *MetricService) UpdateMany(list []models.Metrics) error {
+func (s *MetricService) UpdateMany(ctx context.Context, list []models.Metrics) error {
 	newVals := storage.Database{
 		Gauge:   storage.GaugeCollection{},
 		Counter: storage.CounterCollection{},
@@ -102,5 +103,5 @@ func (s *MetricService) UpdateMany(list []models.Metrics) error {
 		}
 	}
 
-	return s.db.UpdateMany(newVals)
+	return s.db.UpdateMany(ctx, newVals)
 }
