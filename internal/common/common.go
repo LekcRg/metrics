@@ -28,12 +28,14 @@ func Retry(ctx context.Context, rfunc func() error) error {
 		var pgErr *pgconn.PgError
 		var netErr net.Error
 
-		isRetryable := (errors.Is(err, context.DeadlineExceeded) ||
-			errors.As(err, &netErr) ||
-			(errors.As(err, &pgErr) &&
-				(pgErr.Code == pgerrcode.ConnectionException ||
-					pgErr.Code == pgerrcode.DeadlockDetected ||
-					pgerrcode.IsConnectionException(pgErr.Code))))
+		netErrRetryable := (errors.As(err, &netErr) && netErr.Timeout())
+		pgErrRetryable := errors.As(err, &pgErr) &&
+			(pgErr.Code == pgerrcode.ConnectionException ||
+				pgErr.Code == pgerrcode.DeadlockDetected ||
+				pgerrcode.IsConnectionException(pgErr.Code))
+		timoutErrRetryable := errors.Is(err, context.DeadlineExceeded)
+
+		isRetryable := timoutErrRetryable || netErrRetryable || pgErrRetryable
 
 		if !isRetryable || i == 3 {
 			return err
