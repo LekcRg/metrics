@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/common"
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/services/metric"
@@ -23,7 +23,7 @@ func validateSHA256(w http.ResponseWriter, r *http.Request,
 			return fmt.Errorf("empty hash")
 		}
 
-		sha := common.GenerateSHA256(body, config.Key)
+		sha := crypto.GenerateSHA256(body, config.Key)
 		if sha != headerSHA {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return fmt.Errorf("hash is not correct")

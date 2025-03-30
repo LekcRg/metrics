@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/LekcRg/metrics/internal/common"
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
+	"github.com/LekcRg/metrics/internal/retry"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,7 +23,7 @@ func NewPostgres(ctx context.Context, config config.ServerConfig) (*Postgres, er
 		return nil, err
 	}
 
-	err = common.Retry(ctx, func() error {
+	err = retry.Retry(ctx, func() error {
 		err = conn.Ping(ctx)
 		if err != nil {
 			return err
@@ -36,7 +36,7 @@ func NewPostgres(ctx context.Context, config config.ServerConfig) (*Postgres, er
 		return nil, err
 	}
 
-	err = common.Retry(ctx, func() error {
+	err = retry.Retry(ctx, func() error {
 		_, err := conn.Exec(ctx, `create table if not exists gauge(
 		name text not null unique PRIMARY KEY,
 		value double precision not null,
@@ -50,7 +50,7 @@ func NewPostgres(ctx context.Context, config config.ServerConfig) (*Postgres, er
 		return nil, err
 	}
 
-	err = common.Retry(ctx, func() error {
+	err = retry.Retry(ctx, func() error {
 		_, err = conn.Exec(ctx, `create table if not exists counter(
 		name text not null unique PRIMARY KEY,
 		value bigint not null,
@@ -78,7 +78,7 @@ func (p Postgres) UpdateCounter(ctx context.Context, name string, value storage.
 	`
 	var result storage.Counter
 
-	err := common.Retry(ctx, func() error {
+	err := retry.Retry(ctx, func() error {
 		row := p.db.QueryRow(ctx, req, name, value)
 
 		var val sql.NullInt64
@@ -112,7 +112,7 @@ func (p Postgres) UpdateGauge(ctx context.Context, name string, value storage.Ga
 	`
 	var result storage.Gauge
 
-	err := common.Retry(ctx, func() error {
+	err := retry.Retry(ctx, func() error {
 		row := p.db.QueryRow(ctx, req, name, value)
 
 		var val sql.NullFloat64
@@ -161,7 +161,7 @@ func (p Postgres) UpdateMany(ctx context.Context, list storage.Database) error {
 		batch.Queue(reqGauge, key, value)
 	}
 
-	return common.Retry(ctx, func() error {
+	return retry.Retry(ctx, func() error {
 		tx, err := p.db.BeginTx(ctx, pgx.TxOptions{})
 		if err != nil {
 			return err
@@ -189,7 +189,7 @@ func (p Postgres) UpdateMany(ctx context.Context, list storage.Database) error {
 func (p Postgres) GetAllCounter(ctx context.Context) (storage.CounterCollection, error) {
 	req := `SELECT name, value FROM counter`
 	var list storage.CounterCollection
-	err := common.Retry(ctx, func() error {
+	err := retry.Retry(ctx, func() error {
 		rows, err := p.db.Query(ctx, req)
 		if err != nil {
 			logger.Log.Error("error while sending request to db")
@@ -228,7 +228,7 @@ func (p Postgres) GetAllGauge(ctx context.Context) (storage.GaugeCollection, err
 	req := `SELECT name, value FROM gauge`
 
 	var list storage.GaugeCollection
-	err := common.Retry(ctx, func() error {
+	err := retry.Retry(ctx, func() error {
 		rows, err := p.db.Query(ctx, req)
 		if err != nil {
 			logger.Log.Error("error while sending request to db")
@@ -267,7 +267,7 @@ func (p Postgres) GetGaugeByName(ctx context.Context, name string) (storage.Gaug
 	req := `SELECT value FROM gauge WHERE name=$1 LIMIT 1`
 
 	var val sql.NullFloat64
-	err := common.Retry(ctx, func() error {
+	err := retry.Retry(ctx, func() error {
 		row := p.db.QueryRow(ctx, req, name)
 
 		err := row.Scan(&val)
@@ -294,7 +294,7 @@ func (p Postgres) GetCounterByName(ctx context.Context, name string) (storage.Co
 	req := `SELECT value FROM counter WHERE name=$1 LIMIT 1`
 
 	var val sql.NullInt64
-	err := common.Retry(ctx, func() error {
+	err := retry.Retry(ctx, func() error {
 		row := p.db.QueryRow(ctx, req, name)
 
 		err := row.Scan(&val)
@@ -338,7 +338,7 @@ func (p Postgres) GetAll(ctx context.Context) (storage.Database, error) {
 
 func (p Postgres) Ping(ctx context.Context) error {
 	if p.db != nil {
-		return common.Retry(ctx, func() error {
+		return retry.Retry(ctx, func() error {
 			err := p.db.Ping(ctx)
 			if err != nil {
 				return err

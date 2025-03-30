@@ -12,15 +12,16 @@ import (
 
 	"github.com/LekcRg/metrics/internal/agent/monitoring"
 	"github.com/LekcRg/metrics/internal/cgzip"
-	"github.com/LekcRg/metrics/internal/common"
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
+	"github.com/LekcRg/metrics/internal/retry"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
 type Sender struct {
-	URL       string
+	url       string
 	config    config.AgentConfig
 	monitor   *monitoring.MonitoringStats
 	countSent int
@@ -38,7 +39,7 @@ func New(
 	}
 
 	return &Sender{
-		URL:       baseURL,
+		url:       baseURL,
 		config:    config,
 		monitor:   monitor,
 		countSent: 0,
@@ -47,14 +48,14 @@ func New(
 }
 
 func (s *Sender) postRequest(ctx context.Context, body []byte) error {
-	req, err := cgzip.GetGzippedReq(ctx, s.URL, body)
+	req, err := cgzip.GetGzippedReq(ctx, s.url, body)
 	if err != nil {
 		logger.Log.Error("Error while getting gzipped request")
 		return err
 	}
 
 	if s.config.Key != "" {
-		sha := common.GenerateSHA256(body, s.config.Key)
+		sha := crypto.GenerateSHA256(body, s.config.Key)
 		req.Header.Set("HashSHA256", sha)
 	}
 
@@ -62,7 +63,7 @@ func (s *Sender) postRequest(ctx context.Context, body []byte) error {
 	client := &http.Client{}
 	var resp *http.Response
 
-	err = common.Retry(ctx, func() error {
+	err = retry.Retry(ctx, func() error {
 		resp, err = client.Do(req)
 		if err != nil {
 			return err
@@ -110,10 +111,14 @@ func (s *Sender) SendMetrics(ctx context.Context, list []models.Metrics) {
 }
 
 func (s *Sender) getRandomValue() storage.Gauge {
-	randomValueLeft := storage.Gauge(rand.IntN(99999))
-	randomValueRight := storage.Gauge(float64(rand.IntN(999)) / 1000)
+	const intMax = 99999
+	const fractMax = 999
+	const fractDivisor = 1000
 
-	return randomValueLeft + randomValueRight
+	intPart := storage.Gauge(rand.IntN(intMax))
+	fractPart := storage.Gauge(float64(rand.IntN(999)) / fractDivisor)
+
+	return intPart + fractPart
 }
 
 func (s *Sender) genMetricStruct(
