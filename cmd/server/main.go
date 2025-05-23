@@ -71,7 +71,7 @@ func main() {
 	metricService := metric.NewMetricsService(db, config, store)
 
 	logger.Log.Info("Create router")
-	router := router.NewRouter(*metricService, *ping)
+	router := router.NewRouter(*metricService, *ping, config)
 
 	if config.Restore {
 		store.Restore(ctx)

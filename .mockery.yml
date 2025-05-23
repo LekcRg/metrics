@@ -18,3 +18,7 @@ packages:
     config:
       all: true
       filename: metric_mock.go
+  github.com/LekcRg/metrics/internal/server/handler/update:
+    config:
+      all: true
+      filename: update_mock.go

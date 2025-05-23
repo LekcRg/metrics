@@ -22,7 +22,7 @@ func TestUpdateRoutes(t *testing.T) {
 	store := store.NewStore(storage, config)
 	updateService := metric.NewMetricsService(storage, config, store)
 	r := chi.NewRouter()
-	UpdateRoutes(r, *updateService)
+	UpdateRoutes(r, *updateService, config)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
