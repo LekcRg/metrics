@@ -35,7 +35,7 @@ func validateAndGetBody(w http.ResponseWriter, r *http.Request) ([]byte, error) 
 	contentType := r.Header.Get("Content-type")
 
 	if !strings.Contains(contentType, "application/json") && contentType != "" {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Bad request: incorrect Content-Type", http.StatusBadRequest)
 		return nil, fmt.Errorf("incorrect content-type")
 	}
 
