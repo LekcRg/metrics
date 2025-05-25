@@ -45,7 +45,7 @@ func TestSender_postRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 			body := []byte("test")
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if tt.key != "" {
@@ -56,7 +56,7 @@ func TestSender_postRequest(t *testing.T) {
 				}
 
 				if tt.retry > 0 {
-					time.Sleep(300 * time.Millisecond)
+					cancel()
 					tt.retry--
 				}
 				w.WriteHeader(tt.resStatus)

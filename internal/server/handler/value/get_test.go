@@ -102,6 +102,7 @@ func TestGet(t *testing.T) {
 			h(w, r)
 
 			res := w.Result()
+			defer res.Body.Close()
 			assert.Equal(t, tt.want.code, res.StatusCode)
 			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"))
 		})

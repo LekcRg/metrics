@@ -96,7 +96,7 @@ func TestPost(t *testing.T) {
 				if tt.serviceError {
 					err = errors.New("err")
 				}
-				var wantMetric models.Metrics = models.Metrics{}
+				var wantMetric models.Metrics
 				if tt.want.metric != nil {
 					wantMetric = *tt.want.metric
 				}
@@ -112,6 +112,7 @@ func TestPost(t *testing.T) {
 			h(w, r)
 
 			res := w.Result()
+			defer res.Body.Close()
 			assert.Equal(t, tt.want.code, res.StatusCode)
 		})
 	}

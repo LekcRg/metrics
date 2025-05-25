@@ -41,6 +41,7 @@ func TestPing(t *testing.T) {
 			handler.ServeHTTP(w, req)
 
 			resp := w.Result()
+			defer resp.Body.Close()
 
 			assert.Equal(t, tt.expectedCode, resp.StatusCode)
 		})

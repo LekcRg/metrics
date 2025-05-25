@@ -133,6 +133,7 @@ func TestPostJSON(t *testing.T) {
 			h(w, req)
 
 			resp := w.Result()
+			defer resp.Body.Close()
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 
 			if tt.want.code != 200 || tt.input == nil {
@@ -324,6 +325,7 @@ func TestPostMany(t *testing.T) {
 			h(w, req)
 
 			resp := w.Result()
+			defer resp.Body.Close()
 			assert.Equal(t, tt.want.code, resp.StatusCode)
 
 			if tt.want.code != 200 || tt.input == nil {

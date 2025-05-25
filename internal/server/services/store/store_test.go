@@ -59,7 +59,10 @@ func TestSave(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			file, err := os.CreateTemp("", "test_save")
-			defer file.Close()
+			defer func() {
+				err = file.Close()
+				require.NoError(t, err)
+			}()
 			require.NoError(t, err)
 
 			st := mocks.NewMockStorage(t)
