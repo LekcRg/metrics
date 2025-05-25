@@ -3,7 +3,6 @@ package metric
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/LekcRg/metrics/internal/logger"
@@ -15,6 +14,7 @@ var (
 	ErrIncorrectCounterValue = errors.New("counter value must be int64")
 	ErrIncorrectGaugeValue   = errors.New("counter value must be float64")
 	ErrMissingValue          = errors.New("missing metric value")
+	ErrCannotGetValue        = errors.New("can'not get new value")
 )
 
 // TODO: Check errors after db
@@ -57,7 +57,7 @@ func (s *MetricService) HandleCounterUpdate(ctx context.Context, json models.Met
 
 	if err != nil {
 		logger.Log.Error("error while getting new counter value")
-		return models.Metrics{}, fmt.Errorf("can'not get new value")
+		return models.Metrics{}, ErrCannotGetValue
 	}
 
 	return models.Metrics{
@@ -78,7 +78,7 @@ func (s *MetricService) HandleGaugeUpdate(ctx context.Context, json models.Metri
 
 	if err != nil {
 		logger.Log.Error("error while getting new gauge value")
-		return models.Metrics{}, fmt.Errorf("can'not get new value")
+		return models.Metrics{}, ErrCannotGetValue
 	}
 
 	if s.Config.SyncSave {

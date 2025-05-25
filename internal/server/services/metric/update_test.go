@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -32,6 +33,8 @@ func TestUpdateMetric(t *testing.T) {
 		name    string
 		args    args
 		wantErr error
+		save    bool
+		saveErr bool
 	}{
 		{
 			name: "Create counter metric",
@@ -78,6 +81,27 @@ func TestUpdateMetric(t *testing.T) {
 			},
 			wantErr: ErrIncorrectCounterValue,
 		},
+		{
+			name: "Sync save",
+			args: args{
+				reqName:  "counterName",
+				reqType:  "counter",
+				reqValue: "10",
+			},
+			wantErr: nil,
+			save:    true,
+		},
+		{
+			name: "Sync save error",
+			args: args{
+				reqName:  "counterName",
+				reqType:  "counter",
+				reqValue: "10",
+			},
+			wantErr: nil,
+			save:    true,
+			saveErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,10 +124,22 @@ func TestUpdateMetric(t *testing.T) {
 				}
 			}
 
+			store := NewMockStore(t)
+			if tt.save {
+				var err error
+
+				if tt.saveErr {
+					err = errors.New("store err")
+				}
+				store.EXPECT().Save(context.Background()).Return(err)
+			}
+
 			s := &MetricService{
-				Config: testdata.TestServerConfig,
-				db:     st,
-				store:  NewMockStore(t),
+				Config: config.ServerConfig{
+					SyncSave: tt.save,
+				},
+				db:    st,
+				store: store,
 			}
 			err := s.UpdateMetric(ctx, tt.args.reqName, tt.args.reqType, tt.args.reqValue)
 			if tt.wantErr == nil {
@@ -129,6 +165,7 @@ func TestHandleCounterUpdate(t *testing.T) {
 		json    models.Metrics
 		want    models.Metrics
 		wantErr error
+		dbErr   bool
 	}{
 		{
 			name:    "Valid counter",
@@ -155,15 +192,26 @@ func TestHandleCounterUpdate(t *testing.T) {
 			want:    models.Metrics{},
 			wantErr: ErrMissingValue,
 		},
+		{
+			name:    "DB return error",
+			json:    validJSON,
+			want:    validJSON,
+			wantErr: ErrCannotGetValue,
+			dbErr:   true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
-			if tt.wantErr == nil {
+			if tt.wantErr == nil || tt.dbErr {
+				var err error = nil
+				if tt.dbErr {
+					err = errors.New("db err")
+				}
 				st.EXPECT().UpdateCounter(ctx, tt.json.ID, *tt.json.Delta).
-					Return(*tt.want.Delta, tt.wantErr)
+					Return(*tt.want.Delta, err)
 			}
 
 			s := &MetricService{
@@ -201,6 +249,9 @@ func TestHandleGaugeUpdate(t *testing.T) {
 		json    models.Metrics
 		want    models.Metrics
 		wantErr error
+		save    bool
+		saveErr bool
+		dbErr   bool
 	}{
 		{
 			name:    "Valid gauge",
@@ -227,21 +278,58 @@ func TestHandleGaugeUpdate(t *testing.T) {
 			want:    models.Metrics{},
 			wantErr: ErrMissingValue,
 		},
+		{
+			name:    "DB return error",
+			json:    validJSON,
+			want:    validJSON,
+			wantErr: ErrCannotGetValue,
+			dbErr:   true,
+		},
+		{
+			name: "Sync save",
+			json: validJSON,
+			want: validJSON,
+			save: true,
+		},
+		{
+			name:    "Sync save error",
+			json:    validJSON,
+			want:    validJSON,
+			save:    true,
+			saveErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
-			if tt.wantErr == nil {
+			if tt.wantErr == nil || tt.dbErr {
+				var err error
+
+				if tt.dbErr {
+					err = errors.New("db err")
+				}
 				st.EXPECT().UpdateGauge(ctx, tt.json.ID, *tt.json.Value).
-					Return(*tt.want.Value, tt.wantErr)
+					Return(*tt.want.Value, err)
+			}
+
+			store := NewMockStore(t)
+			if tt.save {
+				var err error
+
+				if tt.saveErr {
+					err = errors.New("store err")
+				}
+				store.EXPECT().Save(context.Background()).Return(err)
 			}
 
 			s := &MetricService{
-				Config: testdata.TestServerConfig,
-				db:     st,
-				store:  NewMockStore(t),
+				Config: config.ServerConfig{
+					SyncSave: tt.save,
+				},
+				db:    st,
+				store: store,
 			}
 			got, err := s.HandleGaugeUpdate(ctx, tt.json)
 			if tt.wantErr != nil {
