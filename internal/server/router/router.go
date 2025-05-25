@@ -21,7 +21,7 @@ func NewRouter(
 	r.Use(cgzip.GzipHandle)
 	r.Use(cgzip.GzipBody)
 
-	r.Get("/", home.Get(metricService))
+	r.Get("/", home.Get(&metricService))
 	r.Get("/ping", ping.Ping(pingService))
 	UpdateRoutes(r, metricService, cfg)
 	ValueRoutes(r, metricService)

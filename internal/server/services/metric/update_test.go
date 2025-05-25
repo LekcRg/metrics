@@ -103,7 +103,7 @@ func TestUpdateMetric(t *testing.T) {
 			s := &MetricService{
 				Config: testdata.TestServerConfig,
 				db:     st,
-				store:  mocks.NewMockStore(t),
+				store:  NewMockStore(t),
 			}
 			err := s.UpdateMetric(ctx, tt.args.reqName, tt.args.reqType, tt.args.reqValue)
 			if tt.wantErr == nil {
@@ -169,7 +169,7 @@ func TestHandleCounterUpdate(t *testing.T) {
 			s := &MetricService{
 				Config: testdata.TestServerConfig,
 				db:     st,
-				store:  mocks.NewMockStore(t),
+				store:  NewMockStore(t),
 			}
 			got, err := s.HandleCounterUpdate(ctx, tt.json)
 			if tt.wantErr != nil {
@@ -241,7 +241,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 			s := &MetricService{
 				Config: testdata.TestServerConfig,
 				db:     st,
-				store:  mocks.NewMockStore(t),
+				store:  NewMockStore(t),
 			}
 			got, err := s.HandleGaugeUpdate(ctx, tt.json)
 			if tt.wantErr != nil {
@@ -323,7 +323,7 @@ func TestUpdateMetricJSON(t *testing.T) {
 			s := &MetricService{
 				Config: testdata.TestServerConfig,
 				db:     st,
-				store:  mocks.NewMockStore(t),
+				store:  NewMockStore(t),
 			}
 
 			got, err := s.UpdateMetricJSON(ctx, tt.json)
@@ -428,7 +428,7 @@ func TestUpdateMany(t *testing.T) {
 			s := &MetricService{
 				Config: testdata.TestServerConfig,
 				db:     st,
-				store:  mocks.NewMockStore(t),
+				store:  NewMockStore(t),
 			}
 
 			err := s.UpdateMany(ctx, tt.metrics)

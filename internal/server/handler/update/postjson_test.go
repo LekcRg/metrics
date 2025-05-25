@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/crypto"
-	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -100,7 +99,7 @@ func TestPostJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := mocks.NewMockMetricUpdater(t)
+			s := NewMockMetricUpdater(t)
 			if tt.input != nil {
 				var err error = nil
 				if tt.serviceError {
@@ -281,7 +280,7 @@ func TestPostMany(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := mocks.NewMockMetricUpdater(t)
+			s := NewMockMetricUpdater(t)
 			if len(tt.input) > 0 {
 				var err error = nil
 

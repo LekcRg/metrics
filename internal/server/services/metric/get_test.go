@@ -122,7 +122,7 @@ func TestGetMetric(t *testing.T) {
 			s := &MetricService{
 				Config: config.ServerConfig{},
 				db:     st,
-				store:  mocks.NewMockStore(t),
+				store:  NewMockStore(t),
 			}
 			got, err := s.GetMetric(ctx, tt.args.reqName, tt.args.reqType)
 
@@ -215,7 +215,7 @@ func TestGetMetricJSON(t *testing.T) {
 			s := &MetricService{
 				Config: config.ServerConfig{},
 				db:     st,
-				store:  mocks.NewMockStore(t),
+				store:  NewMockStore(t),
 			}
 			got, err := s.GetMetricJSON(ctx, tt.arg)
 

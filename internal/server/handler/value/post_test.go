@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -75,7 +74,7 @@ func TestPost(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := mocks.NewMockMetricGetter(t)
+			s := NewMockMetricGetter(t)
 
 			w := httptest.NewRecorder()
 

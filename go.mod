@@ -8,6 +8,7 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/shirou/gopsutil/v4 v4.25.2
+	github.com/spf13/pflag v1.0.6
 	go.uber.org/zap v1.27.0
 )
 

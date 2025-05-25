@@ -1,14 +1,18 @@
 package home
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/server/services/metric"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
+
+type MetricService interface {
+	GetAllMetrics(ctx context.Context) (storage.Database, error)
+}
 
 var styles = `<style>
 	* {
@@ -123,7 +127,7 @@ func generateHTML(list storage.Database) string {
 	return wrapHTML(gaugeList, counterList)
 }
 
-func Get(s metric.MetricService) http.HandlerFunc {
+func Get(s MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		all, err := s.GetAllMetrics(r.Context())
 		if err != nil {
