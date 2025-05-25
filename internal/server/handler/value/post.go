@@ -10,7 +10,7 @@ import (
 	"github.com/LekcRg/metrics/internal/logger"
 )
 
-func Post(s MetricService) http.HandlerFunc {
+func Post(s MetricGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := io.ReadAll(r.Body)

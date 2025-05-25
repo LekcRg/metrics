@@ -6,17 +6,16 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/server/services/metric/mocks"
 	"github.com/LekcRg/metrics/internal/server/storage"
-	storagemocks "github.com/LekcRg/metrics/internal/server/storage/mocks"
 	"github.com/LekcRg/metrics/internal/testdata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type mockUpdateArgs struct {
-	st       *storagemocks.MockStorage
+	st       *mocks.MockStorage
 	reqName  string
 	reqValue string
 	reqType  string
@@ -82,7 +81,7 @@ func TestUpdateMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storagemocks.NewMockStorage(t)
+			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
 			if tt.args.reqType == "counter" {
@@ -159,7 +158,7 @@ func TestHandleCounterUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storagemocks.NewMockStorage(t)
+			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
 			if tt.wantErr == nil {
@@ -231,7 +230,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storagemocks.NewMockStorage(t)
+			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
 			if tt.wantErr == nil {
@@ -308,7 +307,7 @@ func TestUpdateMetricJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storagemocks.NewMockStorage(t)
+			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
 			if tt.wantErr == nil {
@@ -418,7 +417,7 @@ func TestUpdateMany(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storagemocks.NewMockStorage(t)
+			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
 			// Ожидание только если что-то должно быть

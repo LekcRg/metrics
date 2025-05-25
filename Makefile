@@ -1,4 +1,5 @@
 COVERAGE_FILE := cover.out
+NO_MOCKS_COVERAGE_FILE := clean_cover.out
 PKG := ./...
 
 .PHONY: all build run test cover fmt lint mocks clean
@@ -19,6 +20,11 @@ test:
 	go test ./... -v
 
 cover:
+	go test -coverprofile=$(COVERAGE_FILE) ./...
+	grep -v "internal/mocks" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
+	go tool cover -func=$(NO_MOCKS_COVERAGE_FILE)
+
+cover-ugly:
 	go test -coverprofile=$(COVERAGE_FILE) ./...
 	go tool cover -func=$(COVERAGE_FILE)
 

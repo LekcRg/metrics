@@ -1,13 +1,16 @@
 package ping
 
 import (
+	"context"
 	"io"
 	"net/http"
-
-	"github.com/LekcRg/metrics/internal/server/services/dbping"
 )
 
-func Ping(p dbping.PingService) http.HandlerFunc {
+type PingService interface {
+	Ping(ctx context.Context) error
+}
+
+func Ping(p PingService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := p.Ping(r.Context())
 		if err != nil {

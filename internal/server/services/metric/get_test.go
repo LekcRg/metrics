@@ -6,16 +6,15 @@ import (
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/server/services/metric/mocks"
 	"github.com/LekcRg/metrics/internal/server/storage"
-	storagemocks "github.com/LekcRg/metrics/internal/server/storage/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type mockStorageArgs struct {
-	st           *storagemocks.MockStorage
+	st           *mocks.MockStorage
 	reqName      string
 	reqType      string
 	wantErr      error
@@ -109,7 +108,7 @@ func TestGetMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storagemocks.NewMockStorage(t)
+			st := mocks.NewMockStorage(t)
 
 			mockStorageGet(mockStorageArgs{
 				st:           st,
@@ -202,7 +201,7 @@ func TestGetMetricJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := storagemocks.NewMockStorage(t)
+			st := mocks.NewMockStorage(t)
 
 			mockStorageGet(mockStorageArgs{
 				st:           st,

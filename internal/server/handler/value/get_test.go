@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LekcRg/metrics/internal/server/handler/value/mocks"
+	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -69,7 +69,7 @@ func TestGet(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := mocks.NewMockMetricService(t)
+			s := mocks.NewMockMetricGetter(t)
 
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("name", tt.metric.name)

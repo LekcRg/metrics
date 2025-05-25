@@ -43,7 +43,7 @@ func validateAndGetBody(w http.ResponseWriter, r *http.Request) ([]byte, error) 
 	return io.ReadAll(r.Body)
 }
 
-func PostJSON(s MetricService) http.HandlerFunc {
+func PostJSON(s MetricUpdater) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := validateAndGetBody(w, r)
 		if err != nil {
@@ -79,7 +79,7 @@ func PostJSON(s MetricService) http.HandlerFunc {
 	}
 }
 
-func PostMany(s MetricService, key string) http.HandlerFunc {
+func PostMany(s MetricUpdater, key string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := validateAndGetBody(w, r)
 		if err != nil {
