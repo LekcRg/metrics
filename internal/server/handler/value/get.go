@@ -5,11 +5,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-
-	"github.com/LekcRg/metrics/internal/server/services/metric"
 )
 
-func Get(s metric.MetricService) http.HandlerFunc {
+func Get(s MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		reqType := chi.URLParam(r, "type")
 		reqName := chi.URLParam(r, "name")

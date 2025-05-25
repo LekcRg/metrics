@@ -21,9 +21,9 @@ func isRetryable(err error) bool {
 		(pgErr.Code == pgerrcode.ConnectionException ||
 			pgErr.Code == pgerrcode.DeadlockDetected ||
 			pgerrcode.IsConnectionException(pgErr.Code))
-	timoutErrRetryable := errors.Is(err, context.DeadlineExceeded)
+	timeoutErrRetryable := errors.Is(err, context.DeadlineExceeded)
 
-	return timoutErrRetryable || netErrRetryable || pgErrRetryable
+	return timeoutErrRetryable || netErrRetryable || pgErrRetryable
 }
 
 func Retry(ctx context.Context, rfunc func() error) error {

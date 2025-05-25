@@ -22,3 +22,7 @@ packages:
     config:
       all: true
       filename: update_mock.go
+  github.com/LekcRg/metrics/internal/server/handler/value:
+    config:
+      all: true
+      filename: value_mock.go

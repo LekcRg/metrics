@@ -6,12 +6,11 @@ import (
 	"net/http"
 
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/server/services/metric"
 
 	"github.com/LekcRg/metrics/internal/logger"
 )
 
-func Post(s metric.MetricService) http.HandlerFunc {
+func Post(s MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := io.ReadAll(r.Body)
