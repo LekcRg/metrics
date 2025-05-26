@@ -49,7 +49,7 @@ func TestSender_postRequest(t *testing.T) {
 			body := []byte("test")
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if tt.key != "" {
-					sha := crypto.GenerateSHA256(body, tt.key)
+					sha := crypto.GenerateHMAC(body, tt.key)
 
 					hash := r.Header.Get("HashSHA256")
 					assert.Equal(t, sha, hash)

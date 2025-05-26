@@ -1,3 +1,4 @@
+// Package sender получает метрики из monitoring.MonitoringStats и отправляет на сервер.
 package sender
 
 import (
@@ -55,7 +56,7 @@ func (s *Sender) postRequest(ctx context.Context, body []byte) error {
 	}
 
 	if s.config.Key != "" {
-		sha := crypto.GenerateSHA256(body, s.config.Key)
+		sha := crypto.GenerateHMAC(body, s.config.Key)
 		req.Header.Set("HashSHA256", sha)
 	}
 

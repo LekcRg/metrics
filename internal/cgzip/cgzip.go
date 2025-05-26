@@ -1,3 +1,4 @@
+// Package cgzip предоставляет middleware и утилиты для работы с GZIP-сжатием в HTTP-запросах и ответах.
 package cgzip
 
 import (
@@ -68,6 +69,7 @@ func (w gzipWriter) WriteHeader(statusCode int) {
 	w.headerData.statusCode = statusCode
 }
 
+// GzipHandle — middleware, который сжимает HTTP-ответ, если клиент поддерживает gzip.
 func GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -85,6 +87,7 @@ func GzipHandle(next http.Handler) http.Handler {
 	})
 }
 
+// GzipBody - middleware, который распаковывает тело запроса, если оно передано с Content-Encoding: gzip.
 func GzipBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
@@ -101,6 +104,7 @@ func GzipBody(next http.Handler) http.Handler {
 	})
 }
 
+// GetGzippedReq возвращает POST-запрос с сжатым телом в gzip и headers Content-Encoding: gzip.
 func GetGzippedReq(ctx context.Context, url string, body []byte) (*http.Request, error) {
 	var buf bytes.Buffer
 	gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)

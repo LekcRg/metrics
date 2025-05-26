@@ -309,7 +309,7 @@ func TestPostMany(t *testing.T) {
 			if tt.key != "" {
 				sha := tt.SHA256
 				if sha == "" && tt.input != nil {
-					sha = crypto.GenerateSHA256(buf.Bytes(), tt.key)
+					sha = crypto.GenerateHMAC(buf.Bytes(), tt.key)
 				}
 
 				req.Header.Add("HashSHA256", sha)

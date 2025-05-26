@@ -10,6 +10,7 @@ import (
 	"github.com/LekcRg/metrics/internal/logger"
 )
 
+// Post — хендлер для получения метрики по типу и имени из JSON (models.Metric).
 func Post(s MetricGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()

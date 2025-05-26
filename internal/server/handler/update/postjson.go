@@ -21,7 +21,7 @@ func validateSHA256(w http.ResponseWriter, r *http.Request,
 			return fmt.Errorf("empty hash")
 		}
 
-		sha := crypto.GenerateSHA256(body, key)
+		sha := crypto.GenerateHMAC(body, key)
 		if sha != headerSHA {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return fmt.Errorf("hash is not correct")
@@ -43,6 +43,8 @@ func validateAndGetBody(w http.ResponseWriter, r *http.Request) ([]byte, error) 
 	return io.ReadAll(r.Body)
 }
 
+// PostJSON — хендлер для обновления или создания метрик.
+// Метрики передаются в формате JSON ([]models.Metrics).
 func PostJSON(s MetricUpdater) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := validateAndGetBody(w, r)
@@ -79,6 +81,8 @@ func PostJSON(s MetricUpdater) http.HandlerFunc {
 	}
 }
 
+// PostMany — хендлер для обновления или создания сразу нескольких метрик.
+// Метрики передаются в формате JSON ([]models.Metrics).
 func PostMany(s MetricUpdater, key string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := validateAndGetBody(w, r)

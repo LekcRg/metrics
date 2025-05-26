@@ -2,6 +2,7 @@ package home
 
 import (
 	"context"
+	"html"
 	"io"
 	"net/http"
 	"strconv"
@@ -10,10 +11,12 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
+// MetricService интерфейс сервиса метрик, который нужен для работы хендлера.
 type MetricService interface {
 	GetAllMetrics(ctx context.Context) (storage.Database, error)
 }
 
+// styles тэг <style></style> со стилизацией страницы.
 var styles = `<style>
 	* {
 		margin: 0;
@@ -56,22 +59,24 @@ var styles = `<style>
 	}
 </style>`
 
+// generateHTMLListItem генерирует html тэг li с именем и значением метрики.
 func generateHTMLListItem(name string, value string) string {
 	openLiName := `<li class="sub-list__item"><div class="sub-list__name">`
 	openDivValue := `:</div><div class="sub-list__value">`
-	closeLi := `</div></li>\n`
+	closeLi := `</div></li>`
 	itemLen := len(openLiName) + len(openDivValue) + len(closeLi) + len(name) + len(value)
 	var res strings.Builder
 	res.Grow(itemLen)
 	res.WriteString(openLiName)
-	res.WriteString(name)
+	res.WriteString(html.EscapeString(name))
 	res.WriteString(openDivValue)
-	res.WriteString(value)
+	res.WriteString(html.EscapeString(value))
 	res.WriteString(closeLi)
 
 	return res.String()
 }
 
+// generateHTMLList генерирует 2 списка метрик, с названием типов.
 func generateHTMLList(gaugeList []string, counterList []string) string {
 	HTMLList := strings.Join([]string{`
 	<li class="main-list__item">
@@ -89,6 +94,7 @@ func generateHTMLList(gaugeList []string, counterList []string) string {
 	return HTMLList
 }
 
+// wrapHTML генерирует финальную HTML-страницу, включающую стили и списки метрик.
 func wrapHTML(gaugeList []string, counterList []string) string {
 	list := generateHTMLList(gaugeList, counterList)
 	HTML := strings.Join([]string{`<!DOCTYPE html>
@@ -112,6 +118,7 @@ func wrapHTML(gaugeList []string, counterList []string) string {
 	return HTML
 }
 
+// generateHTML из списка метрик генерирует HTML-страницу.
 func generateHTML(list storage.Database) string {
 	gaugeList := make([]string, 0, len(list.Gauge))
 	counterList := make([]string, 0, len(list.Counter))
@@ -127,6 +134,8 @@ func generateHTML(list storage.Database) string {
 	return wrapHTML(gaugeList, counterList)
 }
 
+// Get возвращает HTTP-хендлер, который отдаёт HTML-страницу со списком всех метрик.
+// Использует MetricService для получения текущих значений.
 func Get(s MetricService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		all, err := s.GetAllMetrics(r.Context())

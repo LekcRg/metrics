@@ -21,8 +21,8 @@ test:
 
 cover:
 	go test -coverprofile=$(COVERAGE_FILE) ./...
-	# grep -v "internal/mocks" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
-	grep -Ev "internal/mocks|memstorage|postgres" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
+	grep -v "internal/mocks" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
+	# grep -Ev "internal/mocks|memstorage|postgres" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
 	go tool cover -func=$(NO_MOCKS_COVERAGE_FILE)
 
 cover-ugly:
