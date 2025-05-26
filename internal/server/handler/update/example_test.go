@@ -50,6 +50,52 @@ func ExamplePost() {
 func ExamplePostJSON() {
 	s := &MockMetricUpdater{}
 	var gaugeVal storage.Gauge = 12.34
+	metric := models.Metrics{
+		ID:    "example",
+		MType: "gauge",
+		Value: &gaugeVal,
+	}
+
+	jsonSend, err := json.Marshal(metric)
+	if err != nil {
+		fmt.Println("create jsonSend err")
+	}
+
+	s.On("UpdateMetricJSON", mock.Anything, metric).Return(metric, nil)
+
+	router := chi.NewRouter()
+	router.Post("/update", PostJSON(s))
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/update", bytes.NewReader(jsonSend))
+	if err != nil {
+		fmt.Println("error create request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := ts.Client().Do(req)
+	if err != nil {
+		fmt.Println("error send req")
+	}
+
+	resBody, err := io.ReadAll(res.Body)
+	defer res.Body.Close()
+	if err != nil {
+		return
+	}
+
+	fmt.Println(string(resBody))
+	fmt.Println(res.Status)
+
+	// Output:
+	// {"id":"example","type":"gauge","value":12.34}
+	// 200 OK
+}
+
+func ExamplePostMany() {
+	s := &MockMetricUpdater{}
+	var gaugeVal storage.Gauge = 12.34
 	var counterVal storage.Counter = 11
 	metrics := []models.Metrics{
 		{
@@ -80,6 +126,7 @@ func ExamplePostJSON() {
 	if err != nil {
 		fmt.Println("error create request")
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err := ts.Client().Do(req)
 	if err != nil {

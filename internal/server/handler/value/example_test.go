@@ -75,6 +75,7 @@ func ExamplePost() {
 	if err != nil {
 		fmt.Println("error create request")
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	res, err := ts.Client().Do(req)
 	if err != nil {
