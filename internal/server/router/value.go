@@ -9,9 +9,9 @@ import (
 
 func ValueRoutes(r chi.Router, metricService metric.MetricService) {
 	r.Route("/value", func(r chi.Router) {
-		r.Post("/", value.Post(metricService))
+		r.Post("/", value.Post(&metricService))
 		r.Route("/{type:counter|gauge}", func(r chi.Router) {
-			r.Get("/{name}", value.Get(metricService))
+			r.Get("/{name}", value.Get(&metricService))
 		})
 		r.Get("/{type}/{name}", err.ErrorBadRequest)
 	})

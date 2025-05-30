@@ -1,3 +1,5 @@
+// Package monitoring собирает метрики с помощью библиотек gopsutil, и runtime.MemStats.
+
 package monitoring
 
 import (

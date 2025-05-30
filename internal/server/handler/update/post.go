@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/server/services/metric"
-
 	"github.com/go-chi/chi/v5"
 )
 
-func Post(s metric.MetricService) http.HandlerFunc {
+// Post — хендлер для обновления или создания метрик.
+// Получает данные о метрике из URL.
+func Post(s MetricUpdater) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 

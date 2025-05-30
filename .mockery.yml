@@ -1,0 +1,23 @@
+all: true
+dir: '{{.InterfaceDir}}'
+force-file-write: true
+formatter: goimports
+log-level: info
+structname: '{{.Mock}}{{.InterfaceName}}'
+filename: '{{.SrcPackageName}}_mock_test.go'
+pkgname: '{{.SrcPackageName}}'
+recursive: false
+require-template-schema-exists: true
+template: testify
+template-schema: '{{.Template}}.schema.json'
+build-tags: "mock"
+packages:
+  github.com/LekcRg/metrics/internal/server/storage:
+    config:
+      pkgname: 'mocks'
+      dir: 'internal/mocks'
+      filename: '{{.SrcPackageName}}.go'
+  github.com/LekcRg/metrics/internal/server/services/metric:
+  github.com/LekcRg/metrics/internal/server/handler/update:
+  github.com/LekcRg/metrics/internal/server/handler/value:
+  github.com/LekcRg/metrics/internal/server/handler/ping:

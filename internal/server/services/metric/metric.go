@@ -1,22 +1,28 @@
 package metric
 
 import (
+	"context"
+	"errors"
+
 	"github.com/LekcRg/metrics/internal/config"
-	"github.com/LekcRg/metrics/internal/server/services/store"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
+var (
+	ErrIncorrectType = errors.New("incorrect type. type must be a counter or a gauge")
+)
+
 type Store interface {
-	Save() error
+	Save(ctx context.Context) error
 }
 
 type MetricService struct {
 	Config config.ServerConfig
 	db     storage.Storage
-	store  *store.Store
+	store  Store
 }
 
-func NewMetricsService(db storage.Storage, config config.ServerConfig, store *store.Store) *MetricService {
+func NewMetricsService(db storage.Storage, config config.ServerConfig, store Store) *MetricService {
 	return &MetricService{
 		Config: config,
 		db:     db,

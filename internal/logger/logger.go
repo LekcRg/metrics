@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// Log — глобальный zap-логгер, инициализируемый через Initialize.
 var Log *zap.Logger = zap.NewNop()
 
 type (
@@ -35,6 +36,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode // захватываем код статуса
 }
 
+// Initialize конфигурирует Log по уровню логирования и режиму.
 func Initialize(level string, isDev bool) error {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
@@ -57,6 +59,7 @@ func Initialize(level string, isDev bool) error {
 	return nil
 }
 
+// RequestLogger — middleware, логирующий HTTP-запросы, включая метод, путь, статус и размер ответа.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()

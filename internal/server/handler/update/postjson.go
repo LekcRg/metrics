@@ -7,23 +7,21 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/LekcRg/metrics/internal/common"
-	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/server/services/metric"
 )
 
 func validateSHA256(w http.ResponseWriter, r *http.Request,
-	body []byte, config config.ServerConfig) error {
-	if config.Key != "" {
+	body []byte, key string) error {
+	if key != "" {
 		headerSHA := r.Header.Get("HashSHA256")
 		if headerSHA == "" {
 			http.Error(w, "Bad request: empty HashSHA256", http.StatusBadRequest)
 			return fmt.Errorf("empty hash")
 		}
 
-		sha := common.GenerateSHA256(body, config.Key)
+		sha := crypto.GenerateHMAC(body, key)
 		if sha != headerSHA {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return fmt.Errorf("hash is not correct")
@@ -37,7 +35,7 @@ func validateAndGetBody(w http.ResponseWriter, r *http.Request) ([]byte, error) 
 	contentType := r.Header.Get("Content-type")
 
 	if !strings.Contains(contentType, "application/json") && contentType != "" {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Bad request: incorrect Content-Type", http.StatusBadRequest)
 		return nil, fmt.Errorf("incorrect content-type")
 	}
 
@@ -45,7 +43,9 @@ func validateAndGetBody(w http.ResponseWriter, r *http.Request) ([]byte, error) 
 	return io.ReadAll(r.Body)
 }
 
-func PostJSON(s metric.MetricService) http.HandlerFunc {
+// PostJSON — хендлер для обновления или создания метрик.
+// Метрики передаются в формате JSON ([]models.Metrics).
+func PostJSON(s MetricUpdater) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := validateAndGetBody(w, r)
 		if err != nil {
@@ -81,7 +81,9 @@ func PostJSON(s metric.MetricService) http.HandlerFunc {
 	}
 }
 
-func PostMany(s metric.MetricService) http.HandlerFunc {
+// PostMany — хендлер для обновления или создания сразу нескольких метрик.
+// Метрики передаются в формате JSON ([]models.Metrics).
+func PostMany(s MetricUpdater, key string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := validateAndGetBody(w, r)
 		if err != nil {
@@ -90,7 +92,7 @@ func PostMany(s metric.MetricService) http.HandlerFunc {
 			return
 		}
 
-		err = validateSHA256(w, r, body, s.Config)
+		err = validateSHA256(w, r, body, key)
 		if err != nil {
 			logger.Log.Error("Error while validating SHA256 hash " + err.Error())
 			return

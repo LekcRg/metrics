@@ -40,7 +40,7 @@ func (s Store) Save(ctx context.Context) error {
 
 	file, err := os.OpenFile(s.cfg.FileStoragePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		logger.Log.Fatal(err.Error())
+		logger.Log.Error(err.Error())
 		return err
 	}
 
@@ -87,7 +87,11 @@ func (s Store) Restore(ctx context.Context) error {
 		return err
 	}
 
-	s.db.UpdateMany(ctx, storage)
+	err = s.db.UpdateMany(ctx, storage)
+	if err != nil {
+		logger.Log.Error("Error while restoring db")
+		return err
+	}
 
 	logger.Log.Info("Success restore data from file " + s.cfg.FileStoragePath)
 

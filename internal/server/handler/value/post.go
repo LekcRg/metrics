@@ -6,12 +6,12 @@ import (
 	"net/http"
 
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/server/services/metric"
 
 	"github.com/LekcRg/metrics/internal/logger"
 )
 
-func Post(s metric.MetricService) http.HandlerFunc {
+// Post — хендлер для получения метрики по типу и имени из JSON (models.Metric).
+func Post(s MetricGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		body, err := io.ReadAll(r.Body)

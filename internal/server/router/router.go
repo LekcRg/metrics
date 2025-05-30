@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/LekcRg/metrics/internal/cgzip"
+	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/server/handler/home"
 	"github.com/LekcRg/metrics/internal/server/handler/ping"
@@ -10,7 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter(metricService metric.MetricService, pingService dbping.PingService) chi.Router {
+func NewRouter(
+	metricService metric.MetricService, pingService dbping.PingService, cfg config.ServerConfig,
+) chi.Router {
 	r := chi.NewRouter()
 	r.Use(logger.RequestLogger)
 
@@ -18,9 +21,9 @@ func NewRouter(metricService metric.MetricService, pingService dbping.PingServic
 	r.Use(cgzip.GzipHandle)
 	r.Use(cgzip.GzipBody)
 
-	r.Get("/", home.Get(metricService))
+	r.Get("/", home.Get(&metricService))
 	r.Get("/ping", ping.Ping(pingService))
-	UpdateRoutes(r, metricService)
+	UpdateRoutes(r, metricService, cfg)
 	ValueRoutes(r, metricService)
 
 	return r
