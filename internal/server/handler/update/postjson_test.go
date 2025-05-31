@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/crypto"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -103,7 +103,7 @@ func TestPostJSON(t *testing.T) {
 			if tt.input != nil {
 				var err error = nil
 				if tt.serviceError {
-					err = errors.New("err")
+					err = merrors.ErrMocked
 				}
 
 				s.EXPECT().UpdateMetricJSON(context.Background(), *tt.input).
@@ -286,7 +286,7 @@ func TestPostMany(t *testing.T) {
 				var err error = nil
 
 				if tt.serviceError {
-					err = errors.New("err")
+					err = merrors.ErrMocked
 				}
 				s.EXPECT().UpdateMany(context.Background(), tt.input).
 					Return(err)

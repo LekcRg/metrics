@@ -2,17 +2,13 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/LekcRg/metrics/internal/logger"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
-)
-
-var (
-	ErrNotFound = errors.New("not found")
 )
 
 func (s *MetricService) GetMetric(ctx context.Context, reqName string, reqType string) (string, error) {
@@ -30,11 +26,11 @@ func (s *MetricService) GetMetric(ctx context.Context, reqName string, reqType s
 		val, err = s.db.GetGaugeByName(ctx, reqName)
 		resVal = strconv.FormatFloat(float64(val), 'f', -1, 64)
 	} else {
-		return "", ErrIncorrectType
+		return "", merrors.ErrIncorrectMetricType
 	}
 
 	if err != nil {
-		return "", ErrNotFound
+		return "", merrors.ErrNotFoundMetric
 	}
 
 	return resVal, nil
@@ -48,7 +44,7 @@ func (s *MetricService) GetMetricJSON(ctx context.Context, json models.Metrics) 
 		val, err := s.db.GetCounterByName(ctx, reqName)
 		if err != nil {
 			logger.Log.Info("not found counter value")
-			return models.Metrics{}, ErrNotFound
+			return models.Metrics{}, merrors.ErrNotFoundMetric
 		}
 
 		return models.Metrics{
@@ -60,7 +56,7 @@ func (s *MetricService) GetMetricJSON(ctx context.Context, json models.Metrics) 
 		val, err := s.db.GetGaugeByName(ctx, reqName)
 		if err != nil {
 			logger.Log.Error("not found gauge value")
-			return models.Metrics{}, ErrNotFound
+			return models.Metrics{}, merrors.ErrNotFoundMetric
 		}
 
 		return models.Metrics{
@@ -70,7 +66,7 @@ func (s *MetricService) GetMetricJSON(ctx context.Context, json models.Metrics) 
 		}, nil
 	}
 
-	return models.Metrics{}, ErrIncorrectType
+	return models.Metrics{}, merrors.ErrIncorrectMetricType
 }
 
 func (s *MetricService) GetAllMetrics(ctx context.Context) (storage.Database, error) {

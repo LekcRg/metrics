@@ -2,11 +2,11 @@ package value
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -85,7 +85,7 @@ func TestGet(t *testing.T) {
 				var err error = nil
 
 				if tt.serviceError {
-					err = errors.New("err")
+					err = merrors.ErrMocked
 				}
 				s.EXPECT().
 					GetMetric(ctx, tt.metric.name, tt.metric.mType).

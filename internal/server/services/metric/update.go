@@ -2,19 +2,12 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"strconv"
 
 	"github.com/LekcRg/metrics/internal/logger"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
-)
-
-var (
-	ErrIncorrectCounterValue = errors.New("counter value must be int64")
-	ErrIncorrectGaugeValue   = errors.New("counter value must be float64")
-	ErrMissingValue          = errors.New("missing metric value")
-	ErrCannotGetValue        = errors.New("can'not get new value")
 )
 
 // TODO: Check errors after db
@@ -22,17 +15,17 @@ func (s *MetricService) UpdateMetric(ctx context.Context, reqName string, reqTyp
 	if reqType == "counter" {
 		value, err := strconv.ParseInt(reqValue, 0, 64)
 		if err != nil {
-			return ErrIncorrectCounterValue
+			return merrors.ErrIncorrectCounterValue
 		}
 		s.db.UpdateCounter(ctx, reqName, storage.Counter(value))
 	} else if reqType == "gauge" {
 		value, err := strconv.ParseFloat(reqValue, 64)
 		if err != nil {
-			return ErrIncorrectGaugeValue
+			return merrors.ErrIncorrectGaugeValue
 		}
 		s.db.UpdateGauge(ctx, reqName, storage.Gauge(value))
 	} else {
-		return ErrIncorrectType
+		return merrors.ErrIncorrectMetricType
 	}
 
 	if s.Config.SyncSave {
@@ -47,17 +40,17 @@ func (s *MetricService) UpdateMetric(ctx context.Context, reqName string, reqTyp
 
 func (s *MetricService) HandleCounterUpdate(ctx context.Context, json models.Metrics) (models.Metrics, error) {
 	if json.Delta == nil {
-		return models.Metrics{}, ErrMissingValue
+		return models.Metrics{}, merrors.ErrMissingMetricValue
 	}
 	if json.MType != "counter" {
-		return models.Metrics{}, ErrIncorrectType
+		return models.Metrics{}, merrors.ErrIncorrectMetricType
 	}
 
 	newVal, err := s.db.UpdateCounter(ctx, json.ID, *json.Delta)
 
 	if err != nil {
 		logger.Log.Error("error while getting new counter value")
-		return models.Metrics{}, ErrCannotGetValue
+		return models.Metrics{}, merrors.ErrCannotGetNewMetricValue
 	}
 
 	return models.Metrics{
@@ -69,16 +62,16 @@ func (s *MetricService) HandleCounterUpdate(ctx context.Context, json models.Met
 
 func (s *MetricService) HandleGaugeUpdate(ctx context.Context, json models.Metrics) (models.Metrics, error) {
 	if json.Value == nil {
-		return models.Metrics{}, ErrMissingValue
+		return models.Metrics{}, merrors.ErrMissingMetricValue
 	}
 	if json.MType != "gauge" {
-		return models.Metrics{}, ErrIncorrectType
+		return models.Metrics{}, merrors.ErrIncorrectMetricType
 	}
 	newVal, err := s.db.UpdateGauge(ctx, json.ID, *json.Value)
 
 	if err != nil {
 		logger.Log.Error("error while getting new gauge value")
-		return models.Metrics{}, ErrCannotGetValue
+		return models.Metrics{}, merrors.ErrCannotGetNewMetricValue
 	}
 
 	if s.Config.SyncSave {
@@ -102,7 +95,7 @@ func (s *MetricService) UpdateMetricJSON(ctx context.Context, json models.Metric
 	case "counter":
 		return s.HandleCounterUpdate(ctx, json)
 	default:
-		return models.Metrics{}, ErrIncorrectType
+		return models.Metrics{}, merrors.ErrIncorrectMetricType
 	}
 }
 

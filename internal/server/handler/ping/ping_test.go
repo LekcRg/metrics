@@ -2,11 +2,11 @@ package ping
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +24,7 @@ func TestPing(t *testing.T) {
 		},
 		{
 			name:         "error ping",
-			mockErr:      errors.New("db down"),
+			mockErr:      merrors.ErrMocked,
 			expectedCode: http.StatusInternalServerError,
 		},
 	}

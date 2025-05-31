@@ -2,11 +2,11 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -61,7 +61,7 @@ func TestUpdateMetric(t *testing.T) {
 				reqType:  "incorrect",
 				reqValue: "1",
 			},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 		{
 			name: "Create gauge with incorrect value",
@@ -70,7 +70,7 @@ func TestUpdateMetric(t *testing.T) {
 				reqType:  "gauge",
 				reqValue: "incorrect",
 			},
-			wantErr: ErrIncorrectGaugeValue,
+			wantErr: merrors.ErrIncorrectGaugeValue,
 		},
 		{
 			name: "Create counter with incorrect value",
@@ -79,7 +79,7 @@ func TestUpdateMetric(t *testing.T) {
 				reqType:  "counter",
 				reqValue: "incorrect",
 			},
-			wantErr: ErrIncorrectCounterValue,
+			wantErr: merrors.ErrIncorrectCounterValue,
 		},
 		{
 			name: "Sync save",
@@ -129,7 +129,7 @@ func TestUpdateMetric(t *testing.T) {
 				var err error
 
 				if tt.saveErr {
-					err = errors.New("store err")
+					err = merrors.ErrMocked
 				}
 				store.EXPECT().Save(context.Background()).Return(err)
 			}
@@ -181,7 +181,7 @@ func TestHandleCounterUpdate(t *testing.T) {
 				Delta: &counterVal,
 			},
 			want:    models.Metrics{},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 		{
 			name: "Counter with nil value",
@@ -190,13 +190,13 @@ func TestHandleCounterUpdate(t *testing.T) {
 				MType: "counter",
 			},
 			want:    models.Metrics{},
-			wantErr: ErrMissingValue,
+			wantErr: merrors.ErrMissingMetricValue,
 		},
 		{
 			name:    "DB return error",
 			json:    validJSON,
 			want:    validJSON,
-			wantErr: ErrCannotGetValue,
+			wantErr: merrors.ErrCannotGetNewMetricValue,
 			dbErr:   true,
 		},
 	}
@@ -208,7 +208,7 @@ func TestHandleCounterUpdate(t *testing.T) {
 			if tt.wantErr == nil || tt.dbErr {
 				var err error = nil
 				if tt.dbErr {
-					err = errors.New("db err")
+					err = merrors.ErrMocked
 				}
 				st.EXPECT().UpdateCounter(ctx, tt.json.ID, *tt.json.Delta).
 					Return(*tt.want.Delta, err)
@@ -267,7 +267,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				Value: &gaugeVal,
 			},
 			want:    models.Metrics{},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 		{
 			name: "Gauge with nil value",
@@ -276,13 +276,13 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				MType: "gauge",
 			},
 			want:    models.Metrics{},
-			wantErr: ErrMissingValue,
+			wantErr: merrors.ErrMissingMetricValue,
 		},
 		{
 			name:    "DB return error",
 			json:    validJSON,
 			want:    validJSON,
-			wantErr: ErrCannotGetValue,
+			wantErr: merrors.ErrCannotGetNewMetricValue,
 			dbErr:   true,
 		},
 		{
@@ -308,7 +308,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				var err error
 
 				if tt.dbErr {
-					err = errors.New("db err")
+					err = merrors.ErrMocked
 				}
 				st.EXPECT().UpdateGauge(ctx, tt.json.ID, *tt.json.Value).
 					Return(*tt.want.Value, err)
@@ -319,7 +319,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				var err error
 
 				if tt.saveErr {
-					err = errors.New("store err")
+					err = merrors.ErrMocked
 				}
 				store.EXPECT().Save(context.Background()).Return(err)
 			}
@@ -390,7 +390,7 @@ func TestUpdateMetricJSON(t *testing.T) {
 				Delta: &counterVal,
 			},
 			want:    models.Metrics{},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 	}
 	for _, tt := range tests {
@@ -438,8 +438,6 @@ func TestUpdateMetricJSON(t *testing.T) {
 }
 
 func TestUpdateMany(t *testing.T) {
-	dbErr := errors.New("db error")
-
 	tests := []struct {
 		name       string
 		metrics    []models.Metrics
@@ -499,8 +497,8 @@ func TestUpdateMany(t *testing.T) {
 				},
 				Counter: storage.CounterCollection{},
 			},
-			dbErr:   dbErr,
-			wantErr: dbErr,
+			dbErr:   merrors.ErrMocked,
+			wantErr: merrors.ErrMocked,
 		},
 	}
 	for _, tt := range tests {

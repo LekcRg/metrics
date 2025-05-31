@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -85,7 +86,7 @@ func TestGetMetric(t *testing.T) {
 				reqType: "counter",
 			},
 			want:    "",
-			wantErr: ErrNotFound,
+			wantErr: merrors.ErrNotFoundMetric,
 		},
 		{
 			name: "Get not found gauge",
@@ -94,7 +95,7 @@ func TestGetMetric(t *testing.T) {
 				reqType: "gauge",
 			},
 			want:    "",
-			wantErr: ErrNotFound,
+			wantErr: merrors.ErrNotFoundMetric,
 		},
 		{
 			name: "Get incorrect type",
@@ -103,7 +104,7 @@ func TestGetMetric(t *testing.T) {
 				reqType: "test",
 			},
 			want:    "",
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 	}
 	for _, tt := range tests {
@@ -178,7 +179,7 @@ func TestGetMetricJSON(t *testing.T) {
 				MType: "counter",
 			},
 			want:    models.Metrics{},
-			wantErr: ErrNotFound,
+			wantErr: merrors.ErrNotFoundMetric,
 		},
 		{
 			name: "Get not found gauge",
@@ -187,7 +188,7 @@ func TestGetMetricJSON(t *testing.T) {
 				MType: "gauge",
 			},
 			want:    models.Metrics{},
-			wantErr: ErrNotFound,
+			wantErr: merrors.ErrNotFoundMetric,
 		},
 		{
 			name: "Get incorrect type",
@@ -196,7 +197,7 @@ func TestGetMetricJSON(t *testing.T) {
 				MType: "test",
 			},
 			want:    models.Metrics{},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 	}
 	for _, tt := range tests {

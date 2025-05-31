@@ -2,8 +2,8 @@ package memstorage
 
 import (
 	"context"
-	"errors"
 
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
@@ -59,7 +59,7 @@ func (s *MemStorage) GetGaugeByName(_ context.Context, name string) (storage.Gau
 		return val, nil
 	}
 
-	return 0, errors.New("not found")
+	return 0, merrors.ErrNotFoundMetric
 }
 
 func (s *MemStorage) GetCounterByName(_ context.Context, name string) (storage.Counter, error) {
@@ -67,7 +67,7 @@ func (s *MemStorage) GetCounterByName(_ context.Context, name string) (storage.C
 		return val, nil
 	}
 
-	return 0, errors.New("not found")
+	return 0, merrors.ErrNotFoundMetric
 }
 
 func (s *MemStorage) GetAll(_ context.Context) (storage.Database, error) {

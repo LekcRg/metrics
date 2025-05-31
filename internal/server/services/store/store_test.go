@@ -3,11 +3,11 @@ package store
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"os"
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/require"
@@ -68,7 +68,7 @@ func TestSave(t *testing.T) {
 			st := mocks.NewMockStorage(t)
 			var dbErr error
 			if tt.dbErr {
-				dbErr = errors.New("db err")
+				dbErr = merrors.ErrMocked
 			}
 			st.EXPECT().GetAll(context.Background()).Return(tt.db, dbErr)
 
@@ -160,7 +160,7 @@ func TestRestore(t *testing.T) {
 			if !tt.wantErr || tt.dbErr {
 				var dbErr error
 				if tt.dbErr {
-					dbErr = errors.New("db err")
+					dbErr = merrors.ErrMocked
 				}
 				st.EXPECT().UpdateMany(context.Background(), tt.db).Return(dbErr)
 			}

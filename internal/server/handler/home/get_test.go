@@ -2,12 +2,12 @@ package home
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -112,7 +112,7 @@ type fakeMetricService struct {
 func (f *fakeMetricService) GetAllMetrics(ctx context.Context) (storage.Database, error) {
 	var err error = nil
 	if f.wantErr {
-		err = errors.New("db err")
+		err = merrors.ErrMocked
 	}
 
 	return f.db, err
