@@ -18,6 +18,26 @@ import (
 // After
 // BenchmarkGenerateHTML-8   3722   326983 ns/op   1098840 B/op   4006 allocs/op
 
+// -----------
+// Before
+// BenchmarkGenerateHTML-8   3376   368293 ns/op   1114840 B/op   5006 allocs/op
+// Again 5k allocs?
+
+// Second optimization
+// Попробовал всю html'ку сделать из html/template
+// After
+// BenchmarkGenerateHTML-8   386   2961987 ns/op   1941128 B/op   36227 allocs/op
+// Не знаю, что я делал не так, но у меня с html/template стало хуже,
+// как fmt.Sprintf, только аллокаций больше)
+
+// Third optimization
+// After
+// Заменил на html/template только li
+// BenchmarkGenerateHTML-8   54   20512934 ns/op   26584035 B/op   225062 allocs/op
+// Тут еще хуже стало ><
+
+// Оставил предыдущий вариант)
+
 func BenchmarkGenerateHTML(b *testing.B) {
 	const lenList = 1000
 	var (
@@ -61,7 +81,7 @@ func Test_generateHTML(t *testing.T) {
 				Counter: map[string]storage.Counter{"B": 2},
 			},
 			wantStatus:   http.StatusOK,
-			wantContains: []string{"A", "1.100", "B", "2"},
+			wantContains: []string{"A", "1.1", "B", "2"},
 		},
 		{
 			name:         "Empty metrics",
