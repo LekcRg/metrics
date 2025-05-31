@@ -69,7 +69,7 @@ func (w gzipWriter) WriteHeader(statusCode int) {
 	w.headerData.statusCode = statusCode
 }
 
-// GzipHandle — middleware, который сжимает HTTP-ответ, если клиент поддерживает gzip.
+// GzipHandle сжимает HTTP-ответ, если клиент поддерживает gzip.
 func GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -87,7 +87,7 @@ func GzipHandle(next http.Handler) http.Handler {
 	})
 }
 
-// GzipBody - middleware, который распаковывает тело запроса, если оно передано с Content-Encoding: gzip.
+// GzipBody распаковывает тело запроса, если оно передано с Content-Encoding: gzip.
 func GzipBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {

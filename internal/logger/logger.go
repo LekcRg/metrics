@@ -59,7 +59,7 @@ func Initialize(level string, isDev bool) error {
 	return nil
 }
 
-// RequestLogger — middleware, логирующий HTTP-запросы, включая метод, путь, статус и размер ответа.
+// RequestLogger логирует HTTP-запросы, включая метод, путь, статус и размер ответа.
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()

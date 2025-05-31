@@ -20,7 +20,11 @@ func TestNewRouter(t *testing.T) {
 	store := store.NewStore(storage, config)
 	updateService := metric.NewMetricsService(storage, config, store)
 	pingService := dbping.NewPing(storage, config)
-	r := NewRouter(*updateService, *pingService, config)
+	r := NewRouter(NewRouterArgs{
+		MetricService: *updateService,
+		PingService:   *pingService,
+		Cfg:           config,
+	})
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 

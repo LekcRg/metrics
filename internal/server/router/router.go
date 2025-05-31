@@ -11,9 +11,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter(
-	metricService metric.MetricService, pingService dbping.PingService, cfg config.ServerConfig,
-) chi.Router {
+type NewRouterArgs struct {
+	MetricService metric.MetricService
+	PingService   dbping.PingService
+	Cfg           config.ServerConfig
+}
+
+func NewRouter(args NewRouterArgs) chi.Router {
 	r := chi.NewRouter()
 	r.Use(logger.RequestLogger)
 
@@ -21,10 +25,10 @@ func NewRouter(
 	r.Use(cgzip.GzipHandle)
 	r.Use(cgzip.GzipBody)
 
-	r.Get("/", home.Get(&metricService))
-	r.Get("/ping", ping.Ping(pingService))
-	UpdateRoutes(r, metricService, cfg)
-	ValueRoutes(r, metricService)
+	r.Get("/", home.Get(&args.MetricService))
+	r.Get("/ping", ping.Ping(args.PingService))
+	UpdateRoutes(r, args.MetricService, args.Cfg)
+	ValueRoutes(r, args.MetricService)
 
 	return r
 }
