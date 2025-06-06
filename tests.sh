@@ -10,7 +10,7 @@ build_binaries() {
 # Function to run statictest
 run_statictest() {
   echo "Running statictest..."
-  go1.22.12 vet -vettool=$(which statictest) ./...
+  go vet -vettool=$(which statictest) ./...
 }
 
 # Function to run iteration 1

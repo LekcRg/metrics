@@ -16,6 +16,12 @@ build-server:
 build-agent:
 	go build -o cmd/agent/agent ./cmd/agent/
 
+build-staticlint:
+	go build -o cmd/staticlint/staticlint ./cmd/staticlint/
+
+staticlint:
+	go vet -vettool=./cmd/staticlint/staticlint ./...
+
 test:
 	go test ./... -v
 
