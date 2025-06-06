@@ -50,6 +50,7 @@ func startPostgresContainer(t *testing.T) *postgres.PostgresContainer {
 
 func getPostgres(t *testing.T) (*Postgres, *postgres.PostgresContainer) {
 	container := startPostgresContainer(t)
+	require.NotNil(t, container)
 	ctx := context.Background()
 
 	endpoint, err := container.Endpoint(ctx, "")
