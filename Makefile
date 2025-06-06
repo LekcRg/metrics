@@ -23,6 +23,9 @@ staticlint:
 	go vet -vettool=$(which statictest) ./...
 	go vet -vettool=./cmd/staticlint/staticlint ./...
 
+betteralign:
+	betteralign -apply -test_files ./...
+
 test:
 	go test ./... -v
 

@@ -17,3 +17,17 @@ func TestSaveRuntimeStats(t *testing.T) {
 	require.NotEmpty(t, stats)
 	assert.Contains(t, stats, "Alloc")
 }
+
+func TestSaveGopsStats(t *testing.T) {
+	m := New(5)
+	m.saveGopsStats()
+
+	require.NotNil(t, m.gopsStats)
+
+	_, ok := m.gopsStats["CPUutilization1"]
+	assert.True(t, ok)
+	_, ok = m.gopsStats["FreeMemory"]
+	assert.True(t, ok)
+	_, ok = m.gopsStats["TotalMemory"]
+	assert.True(t, ok)
+}
