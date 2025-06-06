@@ -46,12 +46,12 @@ func TestPostJSON(t *testing.T) {
 		code int
 	}
 	tests := []struct {
+		input        *models.Metrics
 		name         string
 		contentType  string
 		body         string
-		serviceError bool
 		want         want
-		input        *models.Metrics
+		serviceError bool
 	}{
 		{
 			name:  "Positive counter",
@@ -159,11 +159,11 @@ func TestPostMany(t *testing.T) {
 		name         string
 		contentType  string
 		body         string
+		SHA256       string
+		key          string
+		input        []models.Metrics
 		want         want
 		serviceError bool
-		SHA256       string
-		input        []models.Metrics
-		key          string
 	}{
 		{
 			name: "Change one counter",

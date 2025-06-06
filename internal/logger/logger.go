@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Log — глобальный zap-логгер, инициализируемый через Initialize.
+// Log глобальный zap-логгер, инициализируемый через Initialize.
 var Log *zap.Logger = zap.NewNop()
 
 type (

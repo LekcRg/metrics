@@ -8,8 +8,8 @@ import (
 )
 
 type PingService struct {
-	cfg config.ServerConfig
 	db  storage.Storage
+	cfg config.ServerConfig
 }
 
 func NewPing(storage storage.Storage, cfg config.ServerConfig) *PingService {

@@ -15,12 +15,12 @@ import (
 
 func TestSave(t *testing.T) {
 	tests := []struct {
+		db          storage.Database
 		name        string
+		chmod       os.FileMode
 		dbErr       bool
 		wantErr     bool
 		changeChmod bool
-		chmod       os.FileMode
-		db          storage.Database
 	}{
 		{
 			name: "Positive",
@@ -95,13 +95,13 @@ func TestSave(t *testing.T) {
 
 func TestRestore(t *testing.T) {
 	tests := []struct {
+		db          storage.Database
 		name        string
+		fileContent []byte
+		chmod       os.FileMode
 		dbErr       bool
 		wantErr     bool
 		changeChmod bool
-		fileContent []byte
-		chmod       os.FileMode
-		db          storage.Database
 	}{
 		{
 			name: "Positive",

@@ -20,6 +20,7 @@ build-staticlint:
 	go build -o cmd/staticlint/staticlint ./cmd/staticlint/
 
 staticlint:
+	go vet -vettool=$(which statictest) ./...
 	go vet -vettool=./cmd/staticlint/staticlint ./...
 
 test:

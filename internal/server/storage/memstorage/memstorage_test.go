@@ -142,8 +142,8 @@ func TestUpdateMany(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
 		list    storage.Database
+		name    string
 		wantErr bool
 	}{
 		{

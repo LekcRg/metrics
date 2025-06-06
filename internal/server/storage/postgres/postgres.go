@@ -37,7 +37,7 @@ func NewPostgres(ctx context.Context, config config.ServerConfig) (*Postgres, er
 	}
 
 	err = retry.Retry(ctx, func() error {
-		_, err := conn.Exec(ctx, `create table if not exists gauge(
+		_, err = conn.Exec(ctx, `create table if not exists gauge(
 		name text not null unique PRIMARY KEY,
 		value double precision not null,
 		created_at timestamp with time zone not null default now()

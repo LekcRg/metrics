@@ -13,8 +13,8 @@ import (
 
 func TestPost(t *testing.T) {
 	type want struct {
-		code        int
 		contentType string
+		code        int
 	}
 	type metric struct {
 		name  string
@@ -22,11 +22,11 @@ func TestPost(t *testing.T) {
 		value string
 	}
 	tests := []struct {
+		metric       metric
 		name         string
 		contentType  string
-		serviceError bool
-		metric       metric
 		want         want
+		serviceError bool
 	}{
 		{
 			name: "Valid gauge",

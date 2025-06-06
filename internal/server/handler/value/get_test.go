@@ -13,9 +13,9 @@ import (
 
 func TestGet(t *testing.T) {
 	type want struct {
-		code        int
 		contentType string
 		value       string
+		code        int
 	}
 	type metric struct {
 		name  string
@@ -23,11 +23,11 @@ func TestGet(t *testing.T) {
 		value string
 	}
 	tests := []struct {
+		metric       metric
 		name         string
 		contentType  string
-		serviceError bool
-		metric       metric
 		want         want
+		serviceError bool
 	}{
 		{
 			name: "Valid gauge",

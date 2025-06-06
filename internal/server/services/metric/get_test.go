@@ -15,10 +15,10 @@ import (
 )
 
 type mockStorageArgs struct {
+	wantErr      error
 	st           *mocks.MockStorage
 	reqName      string
 	reqType      string
-	wantErr      error
 	gaugeDBVal   storage.Gauge
 	counterDBVal storage.Counter
 }
@@ -26,12 +26,13 @@ type mockStorageArgs struct {
 var ctx = context.Background()
 
 func mockStorageGet(tt mockStorageArgs) {
-	if tt.reqType == "gauge" {
-		tt.st.EXPECT().GetGaugeByName(ctx, tt.reqName).
-			Return(tt.gaugeDBVal, tt.wantErr)
-	} else if tt.reqType == "counter" {
+	switch tt.reqType {
+	case "counter":
 		tt.st.EXPECT().GetCounterByName(ctx, tt.reqName).
 			Return(tt.counterDBVal, tt.wantErr)
+	case "gauge":
+		tt.st.EXPECT().GetGaugeByName(ctx, tt.reqName).
+			Return(tt.gaugeDBVal, tt.wantErr)
 	}
 }
 
@@ -52,12 +53,12 @@ func TestGetMetric(t *testing.T) {
 		reqType string
 	}
 	tests := []struct {
-		name         string
+		wantErr      error
 		args         args
+		name         string
+		want         string
 		counterDBVal storage.Counter
 		gaugeDBVal   storage.Gauge
-		want         string
-		wantErr      error
 	}{
 		{
 			name: "Get default counter",
@@ -151,12 +152,12 @@ func TestGetMetricJSON(t *testing.T) {
 		Value: &gaugeVal,
 	}
 	tests := []struct {
-		name         string
+		wantErr      error
 		arg          models.Metrics
+		want         models.Metrics
+		name         string
 		counterDBVal storage.Counter
 		gaugeDBVal   storage.Gauge
-		want         models.Metrics
-		wantErr      error
 	}{
 		{
 			name:         "Get default counter",
@@ -229,10 +230,11 @@ func TestGetMetricJSON(t *testing.T) {
 			require.NoError(t, err)
 			// TODO: equal struct, maybe errors
 			assert.Equal(t, tt.want, got)
-			if tt.arg.MType == "counter" {
+			switch tt.arg.MType {
+			case "counter":
 				require.NotNil(t, got.Delta)
 				assert.Equal(t, *tt.want.Delta, *got.Delta)
-			} else if tt.arg.MType == "gauge" {
+			case "gauge":
 				require.NotNil(t, got.Value)
 				assert.Equal(t, *tt.want.Value, *got.Value)
 			}

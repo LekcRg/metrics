@@ -16,11 +16,11 @@ import (
 )
 
 type mockUpdateArgs struct {
+	wantErr  error
 	st       *mocks.MockStorage
 	reqName  string
 	reqValue string
 	reqType  string
-	wantErr  error
 }
 
 func TestUpdateMetric(t *testing.T) {
@@ -30,9 +30,9 @@ func TestUpdateMetric(t *testing.T) {
 		reqValue string
 	}
 	tests := []struct {
-		name    string
-		args    args
 		wantErr error
+		args    args
+		name    string
 		save    bool
 		saveErr bool
 	}{
@@ -108,14 +108,15 @@ func TestUpdateMetric(t *testing.T) {
 			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
-			if tt.args.reqType == "counter" {
+			switch tt.args.reqType {
+			case "counter":
 				valInt, err := strconv.ParseInt(tt.args.reqValue, 0, 64)
 				// TODO: check err?
 				if err == nil {
 					val := storage.Counter(valInt)
 					st.EXPECT().UpdateCounter(ctx, tt.args.reqName, val).Return(val, tt.wantErr)
 				}
-			} else if tt.args.reqType == "gauge" {
+			case "gauge":
 				valFloat, err := strconv.ParseFloat(tt.args.reqValue, 64)
 				// TODO: check err?
 				if err == nil {
@@ -161,10 +162,10 @@ func TestHandleCounterUpdate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
+		wantErr error
 		json    models.Metrics
 		want    models.Metrics
-		wantErr error
+		name    string
 		dbErr   bool
 	}{
 		{
@@ -245,10 +246,10 @@ func TestHandleGaugeUpdate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
+		wantErr error
 		json    models.Metrics
 		want    models.Metrics
-		wantErr error
+		name    string
 		save    bool
 		saveErr bool
 		dbErr   bool
@@ -365,10 +366,10 @@ func TestUpdateMetricJSON(t *testing.T) {
 		json models.Metrics
 	}
 	tests := []struct {
-		name    string
+		wantErr error
 		json    models.Metrics
 		want    models.Metrics
-		wantErr error
+		name    string
 	}{
 		{
 			name:    "Update gauge",
@@ -399,12 +400,13 @@ func TestUpdateMetricJSON(t *testing.T) {
 			ctx := context.Background()
 
 			if tt.wantErr == nil {
-				if tt.json.MType == "gauge" {
-					st.EXPECT().UpdateGauge(ctx, tt.json.ID, *tt.json.Value).
-						Return(*tt.want.Value, tt.wantErr)
-				} else if tt.json.MType == "counter" {
+				switch tt.json.MType {
+				case "counter":
 					st.EXPECT().UpdateCounter(ctx, tt.json.ID, *tt.json.Delta).
 						Return(*tt.want.Delta, tt.wantErr)
+				case "gauge":
+					st.EXPECT().UpdateGauge(ctx, tt.json.ID, *tt.json.Value).
+						Return(*tt.want.Value, tt.wantErr)
 				}
 			}
 
@@ -426,12 +428,13 @@ func TestUpdateMetricJSON(t *testing.T) {
 
 			assert.Equal(t, tt.want, got)
 
-			if tt.json.MType == "gauge" {
-				require.NotNil(t, got.Value)
-				assert.Equal(t, *tt.want.Value, *got.Value)
-			} else if tt.json.MType == "counter" {
+			switch tt.json.MType {
+			case "counter":
 				require.NotNil(t, got.Delta)
 				assert.Equal(t, *tt.want.Delta, *got.Delta)
+			case "gauge":
+				require.NotNil(t, got.Value)
+				assert.Equal(t, *tt.want.Value, *got.Value)
 			}
 		})
 	}
@@ -439,11 +442,11 @@ func TestUpdateMetricJSON(t *testing.T) {
 
 func TestUpdateMany(t *testing.T) {
 	tests := []struct {
-		name       string
-		metrics    []models.Metrics
 		wantDBData storage.Database
 		dbErr      error
 		wantErr    error
+		name       string
+		metrics    []models.Metrics
 	}{
 		{
 			name:       "Empty list",

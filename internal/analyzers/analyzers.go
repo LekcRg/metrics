@@ -60,7 +60,7 @@ import (
 	"honnef.co/go/tools/stylecheck"
 )
 
-// GetPassesAnalyzers возвращает набор стандартных анализаторов из пакета go/analysis/passes.
+// GetPassesAnalyzers возвращает набор стандартных анализаторов из пакета go/analysis/passes.
 func GetPassesAnalyzers() []*analysis.Analyzer {
 	return []*analysis.Analyzer{
 		appends.Analyzer,

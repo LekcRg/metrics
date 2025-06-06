@@ -25,11 +25,11 @@ func ExampleGet() {
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/value/gauge/example", nil)
 	if err != nil {
-		fmt.Println("error create request")
+		panic("error create request")
 	}
 	res, err := ts.Client().Do(req)
-	if err != nil {
-		fmt.Println("error send req")
+	if err != nil || res == nil {
+		panic("error send req")
 	}
 
 	resBody, err := io.ReadAll(res.Body)
@@ -73,13 +73,13 @@ func ExamplePost() {
 
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/value", bytes.NewReader(jsonSend))
 	if err != nil {
-		fmt.Println("error create request")
+		panic("error create request")
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := ts.Client().Do(req)
-	if err != nil {
-		fmt.Println("error send req")
+	if err != nil || res == nil {
+		panic("error send req")
 	}
 
 	resBody, err := io.ReadAll(res.Body)
@@ -92,6 +92,6 @@ func ExamplePost() {
 	fmt.Println(res.Status)
 
 	// Output:
-	// {"id":"example","type":"gauge","value":12.34}
+	// {"value":12.34,"id":"example","type":"gauge"}
 	// 200 OK
 }

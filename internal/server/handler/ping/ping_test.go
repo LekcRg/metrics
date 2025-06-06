@@ -12,10 +12,10 @@ import (
 
 func TestPing(t *testing.T) {
 	tests := []struct {
-		name         string
 		mockErr      error
-		expectedCode int
+		name         string
 		expectedBody string
+		expectedCode int
 	}{
 		{
 			name:         "success ping",

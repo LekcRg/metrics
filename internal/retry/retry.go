@@ -16,8 +16,12 @@ func isRetryable(err error) bool {
 	var pgErr *pgconn.PgError
 	var netErr net.Error
 
-	netErrRetryable := (errors.As(err, &netErr) && netErr.Timeout())
-	pgErrRetryable := errors.As(err, &pgErr) &&
+	if err == nil {
+		return false
+	}
+
+	netErrRetryable := (errors.As(err, &netErr) && netErr != nil && netErr.Timeout())
+	pgErrRetryable := errors.As(err, &pgErr) && pgErr != nil &&
 		(pgErr.Code == pgerrcode.ConnectionException ||
 			pgErr.Code == pgerrcode.DeadlockDetected ||
 			pgerrcode.IsConnectionException(pgErr.Code))

@@ -29,15 +29,15 @@ func TestPost(t *testing.T) {
 		Delta: ptrCounter(12),
 	}
 	type want struct {
-		code   int
 		metric *models.Metrics
+		code   int
 	}
 	tests := []struct {
-		name         string
-		serviceError bool
-		body         string
-		input        *models.Metrics
 		want         want
+		input        *models.Metrics
+		name         string
+		body         string
+		serviceError bool
 	}{
 		{
 			name:  "Valid gauge",

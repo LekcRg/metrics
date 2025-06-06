@@ -17,10 +17,10 @@ import (
 type StatsMap map[string]float64
 
 type MonitoringStats struct {
-	PollInterval int
 	PollSignal   chan any
 	runtimeStats StatsMap
 	gopsStats    StatsMap
+	PollInterval int
 	mu           sync.RWMutex
 }
 

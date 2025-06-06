@@ -17,15 +17,16 @@ func (s *MetricService) GetMetric(ctx context.Context, reqName string, reqType s
 		err    error
 	)
 
-	if reqType == "counter" {
+	switch reqType {
+	case "counter":
 		var val storage.Counter
 		val, err = s.db.GetCounterByName(ctx, reqName)
 		resVal = fmt.Sprintf("%d", val)
-	} else if reqType == "gauge" {
+	case "gauge":
 		var val storage.Gauge
 		val, err = s.db.GetGaugeByName(ctx, reqName)
 		resVal = strconv.FormatFloat(float64(val), 'f', -1, 64)
-	} else {
+	default:
 		return "", merrors.ErrIncorrectMetricType
 	}
 
@@ -40,7 +41,8 @@ func (s *MetricService) GetMetricJSON(ctx context.Context, json models.Metrics) 
 	reqType := json.MType
 	reqName := json.ID
 
-	if reqType == "counter" {
+	switch reqType {
+	case "counter":
 		val, err := s.db.GetCounterByName(ctx, reqName)
 		if err != nil {
 			logger.Log.Info("not found counter value")
@@ -52,7 +54,7 @@ func (s *MetricService) GetMetricJSON(ctx context.Context, json models.Metrics) 
 			MType: reqType,
 			Delta: &val,
 		}, nil
-	} else if reqType == "gauge" {
+	case "gauge":
 		val, err := s.db.GetGaugeByName(ctx, reqName)
 		if err != nil {
 			logger.Log.Error("not found gauge value")

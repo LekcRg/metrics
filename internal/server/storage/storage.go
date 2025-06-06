@@ -2,7 +2,7 @@ package storage
 
 import "context"
 
-// Gauge — значение метрики типа gauge.
+// Gauge — значение метрики типа gauge.
 type Gauge float64
 
 // Counter — значение метрики типа counter.

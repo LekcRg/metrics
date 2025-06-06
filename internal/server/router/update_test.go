@@ -27,8 +27,8 @@ func TestUpdateRoutes(t *testing.T) {
 	defer ts.Close()
 
 	type want struct {
-		code        int
 		contentType string
+		code        int
 	}
 	tests := []struct {
 		name string

@@ -68,10 +68,10 @@ func Test_generateHTML(t *testing.T) {
 		list storage.Database
 	}
 	tests := []struct {
-		name         string
 		db           storage.Database
-		wantStatus   int
+		name         string
 		wantContains []string
+		wantStatus   int
 		wantErr      bool
 	}{
 		{

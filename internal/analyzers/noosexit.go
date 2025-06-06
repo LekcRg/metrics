@@ -1,7 +1,6 @@
 package analyzers
 
 import (
-	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
@@ -16,7 +15,6 @@ var NoOSExitMainAnalyzer = &analysis.Analyzer{
 
 func NoOSExitMain(pass *analysis.Pass) (any, error) {
 	for _, file := range pass.Files {
-		fmt.Println(file.Name.Name)
 		if file.Name.Name != "main" {
 			continue
 		}

@@ -17,10 +17,10 @@ import (
 func TestSender_postRequest(t *testing.T) {
 	tests := []struct {
 		name      string
-		resStatus int
 		key       string
-		wantErr   bool
+		resStatus int
 		retry     int
+		wantErr   bool
 	}{
 		{
 			name:      "Success response",

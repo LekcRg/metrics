@@ -15,10 +15,10 @@ import (
 func TestRequestLogger(t *testing.T) {
 	tests := []struct {
 		name   string
-		code   int
 		url    string
 		method string
 		body   []byte
+		code   int
 	}{
 		{
 			name:   "Get status 200",

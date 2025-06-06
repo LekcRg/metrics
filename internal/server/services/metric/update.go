@@ -10,21 +10,22 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage"
 )
 
-// TODO: Check errors after db
 func (s *MetricService) UpdateMetric(ctx context.Context, reqName string, reqType string, reqValue string) error {
-	if reqType == "counter" {
+	// TODO: Check errors after db
+	switch reqType {
+	case "counter":
 		value, err := strconv.ParseInt(reqValue, 0, 64)
 		if err != nil {
 			return merrors.ErrIncorrectCounterValue
 		}
 		s.db.UpdateCounter(ctx, reqName, storage.Counter(value))
-	} else if reqType == "gauge" {
+	case "gauge":
 		value, err := strconv.ParseFloat(reqValue, 64)
 		if err != nil {
 			return merrors.ErrIncorrectGaugeValue
 		}
 		s.db.UpdateGauge(ctx, reqName, storage.Gauge(value))
-	} else {
+	default:
 		return merrors.ErrIncorrectMetricType
 	}
 
