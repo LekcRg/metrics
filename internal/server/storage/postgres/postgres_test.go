@@ -1,20 +1,79 @@
-package memstorage
+package postgres
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
 // TODO: cycles from ../testdata
+// TODO: add more tests from postgres
 
-func TestUpdateGauge(t *testing.T) {
+var (
+	dbName     = "users"
+	dbUser     = "user"
+	dbPassword = "password"
+)
+
+func terminateContainer(t *testing.T, container testcontainers.Container) {
+	require.NoError(
+		t,
+		testcontainers.TerminateContainer(container),
+		"failed to terminate container",
+	)
+}
+
+func startPostgresContainer(t *testing.T) *postgres.PostgresContainer {
 	ctx := context.Background()
-	s, err := New()
+
+	postgresContainer, err := postgres.Run(ctx,
+		"postgres:17-alpine",
+		postgres.WithDatabase(dbName),
+		postgres.WithUsername(dbUser),
+		postgres.WithPassword(dbPassword),
+		postgres.BasicWaitStrategies(),
+	)
+	if err != nil {
+		require.NoError(t, err, "failed to start container")
+		return nil
+	}
+
+	return postgresContainer
+}
+
+func getPostgres(t *testing.T) (*Postgres, *postgres.PostgresContainer) {
+	container := startPostgresContainer(t)
+	ctx := context.Background()
+
+	endpoint, err := container.Endpoint(ctx, "")
 	require.NoError(t, err)
+
+	cfg := config.ServerConfig{
+		DatabaseDSN: fmt.Sprintf(
+			"postgresql://%s:%s@%s/%s?sslmode=disable",
+			dbUser,
+			dbPassword,
+			endpoint,
+			dbName,
+		),
+	}
+
+	pg, err := NewPostgres(ctx, cfg)
+	require.NoError(t, err)
+
+	return pg, container
+}
+
+func TestGetUpdateGauge(t *testing.T) {
+	pg, container := getPostgres(t)
+	defer terminateContainer(t, container)
 
 	tests := []struct {
 		name    string
@@ -44,12 +103,15 @@ func TestUpdateGauge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			if !tt.wantErr {
-				_, err := s.UpdateGauge(ctx, tt.key, tt.value)
+				_, err := pg.UpdateGauge(ctx, tt.key, tt.value)
 				require.NoError(t, err)
 			}
 
-			got, err := s.GetGaugeByName(ctx, tt.key)
+			got, err := pg.GetGaugeByName(ctx, tt.key)
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -61,9 +123,8 @@ func TestUpdateGauge(t *testing.T) {
 }
 
 func TestUpdateCounter(t *testing.T) {
-	ctx := context.Background()
-	s, err := New()
-	require.NoError(t, err)
+	pg, container := getPostgres(t)
+	defer terminateContainer(t, container)
 
 	tests := []struct {
 		name    string
@@ -100,12 +161,14 @@ func TestUpdateCounter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			if !tt.wantErr {
-				_, err := s.UpdateCounter(ctx, tt.key, tt.value)
+				_, err := pg.UpdateCounter(ctx, tt.key, tt.value)
 				require.NoError(t, err)
 			}
 
-			got, err := s.GetCounterByName(ctx, tt.key)
+			got, err := pg.GetCounterByName(ctx, tt.key)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -113,13 +176,9 @@ func TestUpdateCounter(t *testing.T) {
 				assert.Equal(t, tt.value, got)
 			}
 
-			if tt.twice {
-				return
-			}
-
-			_, err = s.UpdateCounter(ctx, tt.key, tt.value)
+			_, err = pg.UpdateCounter(ctx, tt.key, tt.value)
 			require.NoError(t, err)
-			got, err = s.GetCounterByName(ctx, tt.key)
+			got, err = pg.GetCounterByName(ctx, tt.key)
 			require.NoError(t, err)
 			assert.Equal(t, tt.value*2, got)
 		})
@@ -128,8 +187,9 @@ func TestUpdateCounter(t *testing.T) {
 
 func TestUpdateMany(t *testing.T) {
 	ctx := context.Background()
-	s, err := New()
-	require.NoError(t, err)
+	pg, container := getPostgres(t)
+	defer terminateContainer(t, container)
+
 	counters := storage.CounterCollection{
 		"counter1": 42,
 		"counter2": 0,
@@ -158,19 +218,19 @@ func TestUpdateMany(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if !tt.wantErr {
-				err := s.UpdateMany(ctx, tt.list)
+				err := pg.UpdateMany(ctx, tt.list)
 				require.NoError(t, err)
 			}
 
-			got, err := s.GetAll(ctx)
+			got, err := pg.GetAll(ctx)
 			require.NoError(t, err)
 			assert.Equal(t, tt.list, got)
 
-			gotCounters, err := s.GetAllCounter(ctx)
+			gotCounters, err := pg.GetAllCounter(ctx)
 			require.NoError(t, err)
 			assert.Equal(t, tt.list.Counter, gotCounters)
 
-			gotGauges, err := s.GetAllGauge(ctx)
+			gotGauges, err := pg.GetAllGauge(ctx)
 			require.NoError(t, err)
 			assert.Equal(t, tt.list.Gauge, gotGauges)
 		})

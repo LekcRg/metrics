@@ -1,20 +1,23 @@
-package memstorage
+package testdata
+
+package postgres
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-// TODO: cycles from ../testdata
-
-func TestUpdateGauge(t *testing.T) {
-	ctx := context.Background()
-	s, err := New()
-	require.NoError(t, err)
+func CycleGetUpdateGauge(t *testing.T, func) {
+	pg, container := getPostgres(t)
+	defer terminateContainer(t, container)
 
 	tests := []struct {
 		name    string
@@ -44,26 +47,14 @@ func TestUpdateGauge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !tt.wantErr {
-				_, err := s.UpdateGauge(ctx, tt.key, tt.value)
-				require.NoError(t, err)
-			}
-
-			got, err := s.GetGaugeByName(ctx, tt.key)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.value, got)
-			}
+			// TODO: func()
 		})
 	}
 }
 
-func TestUpdateCounter(t *testing.T) {
-	ctx := context.Background()
-	s, err := New()
-	require.NoError(t, err)
+func CycleUpdateCounter(t *testing.T) {
+	pg, container := getPostgres(t)
+	defer terminateContainer(t, container)
 
 	tests := []struct {
 		name    string
@@ -100,36 +91,16 @@ func TestUpdateCounter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !tt.wantErr {
-				_, err := s.UpdateCounter(ctx, tt.key, tt.value)
-				require.NoError(t, err)
-			}
-
-			got, err := s.GetCounterByName(ctx, tt.key)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.value, got)
-			}
-
-			if tt.twice {
-				return
-			}
-
-			_, err = s.UpdateCounter(ctx, tt.key, tt.value)
-			require.NoError(t, err)
-			got, err = s.GetCounterByName(ctx, tt.key)
-			require.NoError(t, err)
-			assert.Equal(t, tt.value*2, got)
+			// TODO: func()
 		})
 	}
 }
 
-func TestUpdateMany(t *testing.T) {
+func CycleUpdateMany(t *testing.T) {
 	ctx := context.Background()
-	s, err := New()
-	require.NoError(t, err)
+	pg, container := getPostgres(t)
+	defer terminateContainer(t, container)
+
 	counters := storage.CounterCollection{
 		"counter1": 42,
 		"counter2": 0,
@@ -157,22 +128,7 @@ func TestUpdateMany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !tt.wantErr {
-				err := s.UpdateMany(ctx, tt.list)
-				require.NoError(t, err)
-			}
-
-			got, err := s.GetAll(ctx)
-			require.NoError(t, err)
-			assert.Equal(t, tt.list, got)
-
-			gotCounters, err := s.GetAllCounter(ctx)
-			require.NoError(t, err)
-			assert.Equal(t, tt.list.Counter, gotCounters)
-
-			gotGauges, err := s.GetAllGauge(ctx)
-			require.NoError(t, err)
-			assert.Equal(t, tt.list.Gauge, gotGauges)
+			// TODO: func()
 		})
 	}
 }
