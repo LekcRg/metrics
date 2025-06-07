@@ -1,23 +1,33 @@
 COVERAGE_FILE := cover.out
 NO_MOCKS_COVERAGE_FILE := clean_cover.out
 PKG := ./...
+SERVER_PATH := ./cmd/server
+AGENT_PATH := ./cmd/agent
 
 .PHONY: all build run test cover fmt lint mocks clean
 
 all: build
 
 build:
-	go build -o cmd/agent/agent ./cmd/agent/
-	go build -o cmd/server/server ./cmd/server/
+	go build -o $(AGENT_PATH)/agent $(.AGENT_PATH)
+	go build -o $(SERVER_PATH)/server $(SERVER_PATH)
 
 build-server:
-	go build -o cmd/server/server ./cmd/server/
+	go build -o $(SERVER_PATH)/server $(SERVER_PATH)
 
 build-agent:
-	go build -o cmd/agent/agent ./cmd/agent/
+	go build -o $(AGENT_PATH)/agent $(.AGENT_PATH)
 
 build-staticlint:
 	go build -o cmd/staticlint/staticlint ./cmd/staticlint/
+
+release-server:
+	go generate $(SERVER_PATH)
+	go build -o $(SERVER_PATH)/server $(SERVER_PATH)
+
+release-agent:
+	go generate $(AGENT_PATH)
+	go build -o $(AGENT_PATH)/agent $(AGENT_PATH)
 
 staticlint:
 	go vet -vettool=$(which statictest) ./...

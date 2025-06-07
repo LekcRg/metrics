@@ -20,6 +20,8 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage/postgres"
 )
 
+//go:generate go run ../prebuild/prebuild.go -version 0.20
+
 func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
