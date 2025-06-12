@@ -2,20 +2,20 @@ package ping
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPing(t *testing.T) {
 	tests := []struct {
-		name         string
 		mockErr      error
-		expectedCode int
+		name         string
 		expectedBody string
+		expectedCode int
 	}{
 		{
 			name:         "success ping",
@@ -24,7 +24,7 @@ func TestPing(t *testing.T) {
 		},
 		{
 			name:         "error ping",
-			mockErr:      errors.New("db down"),
+			mockErr:      merrors.ErrMocked,
 			expectedCode: http.StatusInternalServerError,
 		},
 	}

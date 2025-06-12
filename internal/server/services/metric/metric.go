@@ -2,14 +2,9 @@ package metric
 
 import (
 	"context"
-	"errors"
 
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/server/storage"
-)
-
-var (
-	ErrIncorrectType = errors.New("incorrect type. type must be a counter or a gauge")
 )
 
 type Store interface {
@@ -17,9 +12,9 @@ type Store interface {
 }
 
 type MetricService struct {
-	Config config.ServerConfig
 	db     storage.Storage
 	store  Store
+	Config config.ServerConfig
 }
 
 func NewMetricsService(db storage.Storage, config config.ServerConfig, store Store) *MetricService {

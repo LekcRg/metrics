@@ -28,15 +28,16 @@ func TestValueRoutes(t *testing.T) {
 	ValueRoutes(r, *updateService)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
+	require.NotNil(t, valueStorage)
 	valueStorage.UpdateGauge(context.Background(), "one", storage.Gauge(123.45))
 	valueStorage.UpdateCounter(context.Background(), "two", storage.Counter(12345))
 	valueStorage.UpdateGauge(context.Background(), "five", storage.Gauge(-123.45))
 	valueStorage.UpdateCounter(context.Background(), "six", storage.Counter(-12345))
 
 	type want struct {
-		code        int
 		contentType string
 		response    string
+		code        int
 	}
 	tests := []struct {
 		name string

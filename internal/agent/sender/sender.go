@@ -22,11 +22,11 @@ import (
 )
 
 type Sender struct {
+	monitor   *monitoring.MonitoringStats
+	jobs      chan []byte
 	url       string
 	config    config.AgentConfig
-	monitor   *monitoring.MonitoringStats
 	countSent int
-	jobs      chan []byte
 }
 
 func New(
@@ -83,7 +83,7 @@ func (s *Sender) postRequest(ctx context.Context, body []byte) error {
 		return err
 	}
 
-	if resp.StatusCode > 299 {
+	if resp != nil && resp.StatusCode > 299 {
 		logger.Log.Warn("Server answered with status code: " +
 			strconv.Itoa(resp.StatusCode))
 		return fmt.Errorf("invalid status code")

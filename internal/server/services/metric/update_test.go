@@ -2,11 +2,11 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/mocks"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
@@ -16,11 +16,11 @@ import (
 )
 
 type mockUpdateArgs struct {
+	wantErr  error
 	st       *mocks.MockStorage
 	reqName  string
 	reqValue string
 	reqType  string
-	wantErr  error
 }
 
 func TestUpdateMetric(t *testing.T) {
@@ -30,9 +30,9 @@ func TestUpdateMetric(t *testing.T) {
 		reqValue string
 	}
 	tests := []struct {
-		name    string
-		args    args
 		wantErr error
+		args    args
+		name    string
 		save    bool
 		saveErr bool
 	}{
@@ -61,7 +61,7 @@ func TestUpdateMetric(t *testing.T) {
 				reqType:  "incorrect",
 				reqValue: "1",
 			},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 		{
 			name: "Create gauge with incorrect value",
@@ -70,7 +70,7 @@ func TestUpdateMetric(t *testing.T) {
 				reqType:  "gauge",
 				reqValue: "incorrect",
 			},
-			wantErr: ErrIncorrectGaugeValue,
+			wantErr: merrors.ErrIncorrectGaugeValue,
 		},
 		{
 			name: "Create counter with incorrect value",
@@ -79,7 +79,7 @@ func TestUpdateMetric(t *testing.T) {
 				reqType:  "counter",
 				reqValue: "incorrect",
 			},
-			wantErr: ErrIncorrectCounterValue,
+			wantErr: merrors.ErrIncorrectCounterValue,
 		},
 		{
 			name: "Sync save",
@@ -108,14 +108,15 @@ func TestUpdateMetric(t *testing.T) {
 			st := mocks.NewMockStorage(t)
 			ctx := context.Background()
 
-			if tt.args.reqType == "counter" {
+			switch tt.args.reqType {
+			case "counter":
 				valInt, err := strconv.ParseInt(tt.args.reqValue, 0, 64)
 				// TODO: check err?
 				if err == nil {
 					val := storage.Counter(valInt)
 					st.EXPECT().UpdateCounter(ctx, tt.args.reqName, val).Return(val, tt.wantErr)
 				}
-			} else if tt.args.reqType == "gauge" {
+			case "gauge":
 				valFloat, err := strconv.ParseFloat(tt.args.reqValue, 64)
 				// TODO: check err?
 				if err == nil {
@@ -129,7 +130,7 @@ func TestUpdateMetric(t *testing.T) {
 				var err error
 
 				if tt.saveErr {
-					err = errors.New("store err")
+					err = merrors.ErrMocked
 				}
 				store.EXPECT().Save(context.Background()).Return(err)
 			}
@@ -161,10 +162,10 @@ func TestHandleCounterUpdate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
+		wantErr error
 		json    models.Metrics
 		want    models.Metrics
-		wantErr error
+		name    string
 		dbErr   bool
 	}{
 		{
@@ -181,7 +182,7 @@ func TestHandleCounterUpdate(t *testing.T) {
 				Delta: &counterVal,
 			},
 			want:    models.Metrics{},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 		{
 			name: "Counter with nil value",
@@ -190,13 +191,13 @@ func TestHandleCounterUpdate(t *testing.T) {
 				MType: "counter",
 			},
 			want:    models.Metrics{},
-			wantErr: ErrMissingValue,
+			wantErr: merrors.ErrMissingMetricValue,
 		},
 		{
 			name:    "DB return error",
 			json:    validJSON,
 			want:    validJSON,
-			wantErr: ErrCannotGetValue,
+			wantErr: merrors.ErrCannotGetNewMetricValue,
 			dbErr:   true,
 		},
 	}
@@ -208,7 +209,7 @@ func TestHandleCounterUpdate(t *testing.T) {
 			if tt.wantErr == nil || tt.dbErr {
 				var err error = nil
 				if tt.dbErr {
-					err = errors.New("db err")
+					err = merrors.ErrMocked
 				}
 				st.EXPECT().UpdateCounter(ctx, tt.json.ID, *tt.json.Delta).
 					Return(*tt.want.Delta, err)
@@ -245,10 +246,10 @@ func TestHandleGaugeUpdate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
+		wantErr error
 		json    models.Metrics
 		want    models.Metrics
-		wantErr error
+		name    string
 		save    bool
 		saveErr bool
 		dbErr   bool
@@ -267,7 +268,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				Value: &gaugeVal,
 			},
 			want:    models.Metrics{},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 		{
 			name: "Gauge with nil value",
@@ -276,13 +277,13 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				MType: "gauge",
 			},
 			want:    models.Metrics{},
-			wantErr: ErrMissingValue,
+			wantErr: merrors.ErrMissingMetricValue,
 		},
 		{
 			name:    "DB return error",
 			json:    validJSON,
 			want:    validJSON,
-			wantErr: ErrCannotGetValue,
+			wantErr: merrors.ErrCannotGetNewMetricValue,
 			dbErr:   true,
 		},
 		{
@@ -308,7 +309,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				var err error
 
 				if tt.dbErr {
-					err = errors.New("db err")
+					err = merrors.ErrMocked
 				}
 				st.EXPECT().UpdateGauge(ctx, tt.json.ID, *tt.json.Value).
 					Return(*tt.want.Value, err)
@@ -319,7 +320,7 @@ func TestHandleGaugeUpdate(t *testing.T) {
 				var err error
 
 				if tt.saveErr {
-					err = errors.New("store err")
+					err = merrors.ErrMocked
 				}
 				store.EXPECT().Save(context.Background()).Return(err)
 			}
@@ -365,10 +366,10 @@ func TestUpdateMetricJSON(t *testing.T) {
 		json models.Metrics
 	}
 	tests := []struct {
-		name    string
+		wantErr error
 		json    models.Metrics
 		want    models.Metrics
-		wantErr error
+		name    string
 	}{
 		{
 			name:    "Update gauge",
@@ -390,7 +391,7 @@ func TestUpdateMetricJSON(t *testing.T) {
 				Delta: &counterVal,
 			},
 			want:    models.Metrics{},
-			wantErr: ErrIncorrectType,
+			wantErr: merrors.ErrIncorrectMetricType,
 		},
 	}
 	for _, tt := range tests {
@@ -399,12 +400,13 @@ func TestUpdateMetricJSON(t *testing.T) {
 			ctx := context.Background()
 
 			if tt.wantErr == nil {
-				if tt.json.MType == "gauge" {
-					st.EXPECT().UpdateGauge(ctx, tt.json.ID, *tt.json.Value).
-						Return(*tt.want.Value, tt.wantErr)
-				} else if tt.json.MType == "counter" {
+				switch tt.json.MType {
+				case "counter":
 					st.EXPECT().UpdateCounter(ctx, tt.json.ID, *tt.json.Delta).
 						Return(*tt.want.Delta, tt.wantErr)
+				case "gauge":
+					st.EXPECT().UpdateGauge(ctx, tt.json.ID, *tt.json.Value).
+						Return(*tt.want.Value, tt.wantErr)
 				}
 			}
 
@@ -426,26 +428,25 @@ func TestUpdateMetricJSON(t *testing.T) {
 
 			assert.Equal(t, tt.want, got)
 
-			if tt.json.MType == "gauge" {
-				require.NotNil(t, got.Value)
-				assert.Equal(t, *tt.want.Value, *got.Value)
-			} else if tt.json.MType == "counter" {
+			switch tt.json.MType {
+			case "counter":
 				require.NotNil(t, got.Delta)
 				assert.Equal(t, *tt.want.Delta, *got.Delta)
+			case "gauge":
+				require.NotNil(t, got.Value)
+				assert.Equal(t, *tt.want.Value, *got.Value)
 			}
 		})
 	}
 }
 
 func TestUpdateMany(t *testing.T) {
-	dbErr := errors.New("db error")
-
 	tests := []struct {
-		name       string
-		metrics    []models.Metrics
 		wantDBData storage.Database
 		dbErr      error
 		wantErr    error
+		name       string
+		metrics    []models.Metrics
 	}{
 		{
 			name:       "Empty list",
@@ -499,8 +500,8 @@ func TestUpdateMany(t *testing.T) {
 				},
 				Counter: storage.CounterCollection{},
 			},
-			dbErr:   dbErr,
-			wantErr: dbErr,
+			dbErr:   merrors.ErrMocked,
+			wantErr: merrors.ErrMocked,
 		},
 	}
 	for _, tt := range tests {

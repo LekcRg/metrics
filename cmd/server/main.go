@@ -20,6 +20,8 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage/postgres"
 )
 
+//go:generate go run ../prebuild/prebuild.go -version 0.20
+
 func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -71,7 +73,11 @@ func main() {
 	metricService := metric.NewMetricsService(db, config, store)
 
 	logger.Log.Info("Create router")
-	router := router.NewRouter(*metricService, *ping, config)
+	router := router.NewRouter(router.NewRouterArgs{
+		MetricService: *metricService,
+		PingService:   *ping,
+		Cfg:           config,
+	})
 
 	if config.Restore {
 		store.Restore(ctx)

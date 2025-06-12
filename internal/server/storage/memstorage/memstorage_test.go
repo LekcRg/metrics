@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: cycles from ../testdata
+
 func TestUpdateGauge(t *testing.T) {
 	ctx := context.Background()
 	s, err := New()
@@ -142,8 +144,8 @@ func TestUpdateMany(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
 		list    storage.Database
+		name    string
 		wantErr bool
 	}{
 		{

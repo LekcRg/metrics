@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/LekcRg/metrics/internal/crypto"
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -46,12 +46,12 @@ func TestPostJSON(t *testing.T) {
 		code int
 	}
 	tests := []struct {
+		input        *models.Metrics
 		name         string
 		contentType  string
 		body         string
-		serviceError bool
 		want         want
-		input        *models.Metrics
+		serviceError bool
 	}{
 		{
 			name:  "Positive counter",
@@ -103,7 +103,7 @@ func TestPostJSON(t *testing.T) {
 			if tt.input != nil {
 				var err error = nil
 				if tt.serviceError {
-					err = errors.New("err")
+					err = merrors.ErrMocked
 				}
 
 				s.EXPECT().UpdateMetricJSON(context.Background(), *tt.input).
@@ -159,11 +159,11 @@ func TestPostMany(t *testing.T) {
 		name         string
 		contentType  string
 		body         string
+		SHA256       string
+		key          string
+		input        []models.Metrics
 		want         want
 		serviceError bool
-		SHA256       string
-		input        []models.Metrics
-		key          string
 	}{
 		{
 			name: "Change one counter",
@@ -286,7 +286,7 @@ func TestPostMany(t *testing.T) {
 				var err error = nil
 
 				if tt.serviceError {
-					err = errors.New("err")
+					err = merrors.ErrMocked
 				}
 				s.EXPECT().UpdateMany(context.Background(), tt.input).
 					Return(err)

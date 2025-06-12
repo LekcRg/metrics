@@ -14,8 +14,8 @@ import (
 )
 
 type Store struct {
-	cfg config.ServerConfig
 	db  storage.Storage
+	cfg config.ServerConfig
 }
 
 func NewStore(storage storage.Storage, cfg config.ServerConfig) *Store {

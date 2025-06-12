@@ -2,19 +2,19 @@ package update
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPost(t *testing.T) {
 	type want struct {
-		code        int
 		contentType string
+		code        int
 	}
 	type metric struct {
 		name  string
@@ -22,11 +22,11 @@ func TestPost(t *testing.T) {
 		value string
 	}
 	tests := []struct {
+		metric       metric
 		name         string
 		contentType  string
-		serviceError bool
-		metric       metric
 		want         want
+		serviceError bool
 	}{
 		{
 			name: "Valid gauge",
@@ -99,7 +99,7 @@ func TestPost(t *testing.T) {
 				var err error = nil
 
 				if tt.serviceError {
-					err = errors.New("err")
+					err = merrors.ErrMocked
 				}
 				s.EXPECT().
 					UpdateMetric(ctx, tt.metric.name, tt.metric.mType, tt.metric.value).

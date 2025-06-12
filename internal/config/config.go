@@ -23,17 +23,17 @@ const defaultRateLimit = 5
 type CommonConfig struct {
 	Addr   string `env:"ADDRESS"`
 	LogLvl string `env:"LOG_LVL"`
-	IsDev  bool   `env:"IS_DEV"`
 	Key    string `env:"KEY"`
+	IsDev  bool   `env:"IS_DEV"`
 }
 
 type ServerConfig struct {
-	CommonConfig
-	StoreInterval   int    `env:"STORE_INTERVAL" envDefault:"-1"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool   `env:"RESTORE"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
-	SyncSave        bool
+	CommonConfig
+	StoreInterval int  `env:"STORE_INTERVAL" envDefault:"-1"`
+	Restore       bool `env:"RESTORE"`
+	SyncSave      bool
 }
 
 type AgentConfig struct {

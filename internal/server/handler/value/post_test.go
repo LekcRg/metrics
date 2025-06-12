@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/LekcRg/metrics/internal/merrors"
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -29,15 +29,15 @@ func TestPost(t *testing.T) {
 		Delta: ptrCounter(12),
 	}
 	type want struct {
-		code   int
 		metric *models.Metrics
+		code   int
 	}
 	tests := []struct {
-		name         string
-		serviceError bool
-		body         string
-		input        *models.Metrics
 		want         want
+		input        *models.Metrics
+		name         string
+		body         string
+		serviceError bool
 	}{
 		{
 			name:  "Valid gauge",
@@ -94,7 +94,7 @@ func TestPost(t *testing.T) {
 				var err error = nil
 
 				if tt.serviceError {
-					err = errors.New("err")
+					err = merrors.ErrMocked
 				}
 				var wantMetric models.Metrics
 				if tt.want.metric != nil {
