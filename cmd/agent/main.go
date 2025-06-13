@@ -14,7 +14,17 @@ import (
 	"github.com/LekcRg/metrics/internal/logger"
 )
 
-//go:generate go run ../prebuild/prebuild.go -version 0.20
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
+func PrintBuildInfo() {
+	fmt.Println("Build version: " + buildVersion)
+	fmt.Println("Build date: " + buildDate)
+	fmt.Println("Build commit: " + buildCommit)
+}
 
 func exit(cancel context.CancelFunc) {
 	sigChan := make(chan os.Signal, 1)
@@ -24,6 +34,7 @@ func exit(cancel context.CancelFunc) {
 }
 
 func main() {
+	PrintBuildInfo()
 	config := config.LoadAgentCfg()
 	logger.Initialize(config.LogLvl, config.IsDev)
 	cfgString := fmt.Sprintf("%+v\n", config)
