@@ -30,4 +30,4 @@ vendor/
 
 # Other
 store.json
-keys
+/keys/
