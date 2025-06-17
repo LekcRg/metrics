@@ -107,6 +107,7 @@ func TestGzipBody(t *testing.T) {
 			h := GzipBody(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
+				defer r.Body.Close()
 
 				assert.Equal(t, content, string(body))
 

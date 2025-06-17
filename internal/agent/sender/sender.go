@@ -3,6 +3,8 @@ package sender
 
 import (
 	"context"
+	crand "crypto/rand"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
@@ -48,7 +50,17 @@ func New(
 	}
 }
 
-func (s *Sender) postRequest(ctx context.Context, body []byte) error {
+func (s *Sender) postRequest(ctx context.Context, argBody []byte) error {
+	var err error
+	body := argBody
+
+	if s.config.PublicKey != nil {
+		body, err = rsa.EncryptPKCS1v15(crand.Reader, s.config.PublicKey, body)
+		if err != nil {
+			return err
+		}
+	}
+
 	req, err := cgzip.GetGzippedReq(ctx, s.url, body)
 	if err != nil {
 		logger.Log.Error("Error while getting gzipped request")

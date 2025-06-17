@@ -1,8 +1,11 @@
 package config
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
 	"flag"
 
+	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/caarlos0/env/v11"
 )
@@ -19,17 +22,21 @@ const defaultHTTPS = false
 const defaultDatabaseDSN = ""
 const defaultKey = ""
 const defaultRateLimit = 5
+const defaultPrivateCryptoKey = ""
+const defaultPublicCryptoKey = ""
 
 type CommonConfig struct {
-	Addr   string `env:"ADDRESS"`
-	LogLvl string `env:"LOG_LVL"`
-	Key    string `env:"KEY"`
-	IsDev  bool   `env:"IS_DEV"`
+	Addr          string `env:"ADDRESS"`
+	LogLvl        string `env:"LOG_LVL"`
+	Key           string `env:"KEY"`
+	CryptoKeyPath string `env:"CRYPTO_KEY"`
+	IsDev         bool   `env:"IS_DEV"`
 }
 
 type ServerConfig struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	PrivateKey      *rsa.PrivateKey
 	CommonConfig
 	StoreInterval int  `env:"STORE_INTERVAL" envDefault:"-1"`
 	Restore       bool `env:"RESTORE"`
@@ -37,6 +44,7 @@ type ServerConfig struct {
 }
 
 type AgentConfig struct {
+	PublicKey *rsa.PublicKey
 	CommonConfig
 	ReportInterval int  `env:"REPORT_INTERVAL"`
 	PollInterval   int  `env:"POLL_INTERVAL"`
@@ -49,6 +57,8 @@ func loadCommonCfg(cfg *CommonConfig) error {
 	flag.StringVar(&cfg.LogLvl, "log", defaultLogLvl, "logging level")
 	flag.StringVar(&cfg.Key, "k", defaultKey, "key for SHA256")
 	flag.BoolVar(&cfg.IsDev, "dev", defaultIsDev, "is development")
+	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", defaultPrivateCryptoKey,
+		"Path to the PEM-encoded RSA key (public for agent, private for server)")
 	flag.Parse()
 
 	var envVars CommonConfig
@@ -70,6 +80,10 @@ func loadCommonCfg(cfg *CommonConfig) error {
 
 	if envVars.IsDev {
 		cfg.IsDev = envVars.IsDev
+	}
+
+	if envVars.CryptoKeyPath != "" {
+		cfg.CryptoKeyPath = envVars.CryptoKeyPath
 	}
 
 	return nil
@@ -116,6 +130,20 @@ func LoadServerCfg() ServerConfig {
 		cfg.SyncSave = cfg.StoreInterval == 0
 	}
 
+	if cfg.CryptoKeyPath != "" {
+		pemBlock, err := crypto.ParsePEMFile(cfg.CryptoKeyPath)
+		if err != nil {
+			panic("error while parse pem\n" + err.Error())
+		}
+
+		priv, err := x509.ParsePKCS1PrivateKey(pemBlock)
+		if err != nil {
+			panic("error while parse pem\n" + err.Error())
+		}
+
+		cfg.PrivateKey = priv
+	}
+
 	return cfg
 }
 
@@ -152,6 +180,20 @@ func LoadAgentCfg() AgentConfig {
 
 	if envVars.IsHTTPS {
 		cfg.IsHTTPS = envVars.IsHTTPS
+	}
+
+	if cfg.CryptoKeyPath != "" {
+		pemBlock, err := crypto.ParsePEMFile(cfg.CryptoKeyPath)
+		if err != nil {
+			panic("error while parse pem\n" + err.Error())
+		}
+
+		pub, err := x509.ParsePKCS1PublicKey(pemBlock)
+		if err != nil {
+			panic("error while parse pem\n" + err.Error())
+		}
+
+		cfg.PublicKey = pub
 	}
 
 	return cfg
