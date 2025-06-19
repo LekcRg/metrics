@@ -3,125 +3,151 @@ package config
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
+	"os"
 
+	"dario.cat/mergo"
 	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/caarlos0/env/v11"
 )
 
-const defaultAddr = "localhost:8080"
-const defaultLogLvl = "debug"
-const defaultIsDev = false
-const defaultStoreInterval = 300
-const defaultFileStoragePath = "store.json"
-const defaultRestore = false
-const defaultReportInterval = 10
-const defaultPollInterval = 2
-const defaultHTTPS = false
-const defaultDatabaseDSN = ""
-const defaultKey = ""
-const defaultRateLimit = 5
-const defaultPrivateCryptoKey = ""
-const defaultPublicCryptoKey = ""
-
 type CommonConfig struct {
-	Addr          string `env:"ADDRESS"`
-	LogLvl        string `env:"LOG_LVL"`
-	Key           string `env:"KEY"`
-	CryptoKeyPath string `env:"CRYPTO_KEY"`
-	IsDev         bool   `env:"IS_DEV"`
+	Addr          string `env:"ADDRESS" json:"address"`
+	LogLvl        string `env:"LOG_LVL" json:"log_lvl"`
+	Key           string `env:"KEY" json:"hmac_key"`
+	CryptoKeyPath string `env:"CRYPTO_KEY" json:"crypto_key"`
+	IsDev         bool   `env:"IS_DEV" json:"dev"`
+	Config        string `env:"CONFIG"`
 }
 
 type ServerConfig struct {
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	DatabaseDSN     string `env:"DATABASE_DSN"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"store_file"`
+	DatabaseDSN     string `env:"DATABASE_DSN" json:"database_dsn"`
 	PrivateKey      *rsa.PrivateKey
 	CommonConfig
-	StoreInterval int  `env:"STORE_INTERVAL" envDefault:"-1"`
-	Restore       bool `env:"RESTORE"`
+	StoreInterval int  `env:"STORE_INTERVAL" envDefault:"-1" json:"store_interval"`
+	Restore       bool `env:"RESTORE" json:"restore"`
 	SyncSave      bool
 }
 
 type AgentConfig struct {
 	PublicKey *rsa.PublicKey
 	CommonConfig
-	ReportInterval int  `env:"REPORT_INTERVAL"`
-	PollInterval   int  `env:"POLL_INTERVAL"`
-	RateLimit      int  `env:"RATE_LIMIT"`
-	IsHTTPS        bool `env:"IS_HTTPS"`
+	ReportInterval int  `env:"REPORT_INTERVAL" json:"report_interval"`
+	PollInterval   int  `env:"POLL_INTERVAL" json:"poll_interval"`
+	RateLimit      int  `env:"RATE_LIMIT" json:"rate_limit"`
+	IsHTTPS        bool `env:"IS_HTTPS" json:"https"`
 }
 
-func loadCommonCfg(cfg *CommonConfig) error {
-	flag.StringVar(&cfg.Addr, "a", defaultAddr, "address for run server")
-	flag.StringVar(&cfg.LogLvl, "log", defaultLogLvl, "logging level")
-	flag.StringVar(&cfg.Key, "k", defaultKey, "key for SHA256")
-	flag.BoolVar(&cfg.IsDev, "dev", defaultIsDev, "is development")
-	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", defaultPrivateCryptoKey,
-		"Path to the PEM-encoded RSA key (public for agent, private for server)")
-	flag.Parse()
+var defaultCommon = CommonConfig{
+	Addr:          "localhost:8080",
+	LogLvl:        "debug",
+	Key:           "",
+	CryptoKeyPath: "",
+	IsDev:         false,
+	Config:        "",
+}
 
-	var envVars CommonConfig
-	err := env.Parse(&envVars)
+var defaultServer = ServerConfig{
+	CommonConfig:    defaultCommon,
+	FileStoragePath: "store.json",
+	DatabaseDSN:     "",
+	StoreInterval:   300,
+	Restore:         false,
+	SyncSave:        false,
+}
+
+var defaultAgent = AgentConfig{
+	CommonConfig:   defaultCommon,
+	ReportInterval: 10,
+	PollInterval:   2,
+	RateLimit:      5,
+	IsHTTPS:        false,
+}
+
+func loadCommonCfg(cfg *CommonConfig) {
+	flag.StringVar(&cfg.Addr, "a", "", "address for run server")
+	flag.StringVar(&cfg.LogLvl, "log", "", "logging level")
+	flag.StringVar(&cfg.Key, "k", "", "key for SHA256")
+	flag.BoolVar(&cfg.IsDev, "dev", false, "is development")
+	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", "",
+		"Path to the PEM-encoded RSA key (public for agent, private for server)")
+	flag.StringVar(&cfg.Config, "config", "", "path to JSON config file Usage: -config/-c")
+	flag.StringVar(&cfg.Config, "c", "", "path to JSON config file Usage: -config/-c")
+	flag.Parse()
+}
+
+func loadJSON[T *ServerConfig | *AgentConfig](path string, cfg T) error {
+	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	if envVars.Addr != "" {
-		cfg.Addr = envVars.Addr
+	defer f.Close()
+
+	jsonBytes, err := io.ReadAll(f)
+	if err != nil {
+		return err
 	}
 
-	if envVars.LogLvl != "" {
-		cfg.LogLvl = envVars.LogLvl
+	err = json.Unmarshal(jsonBytes, cfg)
+	if err != nil {
+		return err
 	}
 
-	if envVars.Key != "" {
-		cfg.Key = envVars.Key
-	}
+	return nil
+}
 
-	if envVars.IsDev {
-		cfg.IsDev = envVars.IsDev
+func mergeConfigs[T ServerConfig | AgentConfig](cfg *T, jsonCfg, flCfg, envVars T) error {
+	if err := mergo.Merge(cfg, jsonCfg, mergo.WithOverride); err != nil {
+		return err
 	}
-
-	if envVars.CryptoKeyPath != "" {
-		cfg.CryptoKeyPath = envVars.CryptoKeyPath
+	if err := mergo.Merge(cfg, flCfg, mergo.WithOverride); err != nil {
+		return err
+	}
+	if err := mergo.Merge(cfg, envVars, mergo.WithOverride); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func LoadServerCfg() ServerConfig {
-	var cfg = ServerConfig{}
+	fl := ServerConfig{}
 
-	flag.IntVar(&cfg.StoreInterval, "i", defaultStoreInterval, "time is seconds to save db to store(file)")
-	flag.StringVar(&cfg.FileStoragePath, "f", defaultFileStoragePath, "path to save store")
-	flag.BoolVar(&cfg.Restore, "r", defaultRestore, "restore db from file")
-	flag.StringVar(&cfg.DatabaseDSN, "d", defaultDatabaseDSN, "Postgres database DSN")
-	err := loadCommonCfg(&cfg.CommonConfig)
-	if err != nil {
-		logger.Log.Error("Error while load common config")
-	}
+	flag.IntVar(&fl.StoreInterval, "i", 0, "time is seconds to save db to store(file)")
+	flag.StringVar(&fl.FileStoragePath, "f", "", "path to save store")
+	flag.BoolVar(&fl.Restore, "r", false, "restore db from file")
+	flag.StringVar(&fl.DatabaseDSN, "d", "", "Postgres database DSN")
+	loadCommonCfg(&fl.CommonConfig)
 	// flag.Parse() in loadCommonCfg()
 
 	var envVars ServerConfig
-	err = env.Parse(&envVars)
+	err := env.Parse(&envVars)
 	if err != nil {
 		logger.Log.Error("Error env vars")
 	}
 
-	if envVars.StoreInterval >= 0 {
-		cfg.StoreInterval = envVars.StoreInterval
+	configPath := envVars.Config
+	if configPath == "" {
+		configPath = fl.Config
 	}
 
-	if envVars.FileStoragePath != "" {
-		cfg.FileStoragePath = envVars.FileStoragePath
+	var jsonCfg ServerConfig
+	if configPath != "" {
+		err := loadJSON(configPath, &jsonCfg)
+		if err != nil {
+			fmt.Println("Error while getting json config\n", err.Error())
+		}
 	}
 
-	if envVars.Restore {
-		cfg.Restore = envVars.Restore
-	}
-
-	if envVars.DatabaseDSN != "" {
-		cfg.DatabaseDSN = envVars.DatabaseDSN
+	cfg := defaultServer
+	err = mergeConfigs(&cfg, jsonCfg, fl, envVars)
+	if err != nil {
+		panic("merge err\n" + err.Error())
 	}
 
 	if cfg.DatabaseDSN != "" {
@@ -148,39 +174,36 @@ func LoadServerCfg() ServerConfig {
 }
 
 func LoadAgentCfg() AgentConfig {
-	cfg := AgentConfig{}
+	fl := AgentConfig{}
 
-	flag.IntVar(&cfg.ReportInterval, "r", defaultReportInterval, "interval for sending runtime metrics")
-	flag.IntVar(&cfg.PollInterval, "p", defaultPollInterval, "interval for getting runtime metrics")
-	flag.IntVar(&cfg.RateLimit, "l", defaultRateLimit, "rate limit requests")
-	flag.BoolVar(&cfg.IsHTTPS, "s", defaultHTTPS, "https true/false, default false")
-	err := loadCommonCfg(&cfg.CommonConfig)
-	if err != nil {
-		logger.Log.Error("Error while load common config")
-	}
+	flag.IntVar(&fl.ReportInterval, "r", 0, "interval for sending runtime metrics")
+	flag.IntVar(&fl.PollInterval, "p", 0, "interval for getting runtime metrics")
+	flag.IntVar(&fl.RateLimit, "l", 0, "rate limit requests")
+	flag.BoolVar(&fl.IsHTTPS, "s", false, "https true/false, default false")
+	loadCommonCfg(&fl.CommonConfig)
 	// flag.Parse() in loadCommonCfg()
 
 	var envVars AgentConfig
-	err = env.Parse(&envVars)
+	err := env.Parse(&envVars)
 	if err != nil {
 		logger.Log.Error("Error parse flags")
 	}
 
-	if envVars.ReportInterval != 0 {
-		cfg.ReportInterval = envVars.ReportInterval
+	configPath := envVars.Config
+	if configPath == "" {
+		configPath = fl.Config
 	}
 
-	if envVars.PollInterval != 0 {
-		cfg.PollInterval = envVars.PollInterval
+	var jsonCfg AgentConfig
+	if configPath != "" {
+		err := loadJSON(configPath, &jsonCfg)
+		if err != nil {
+			fmt.Println("Error while getting json config\n", err.Error())
+		}
 	}
 
-	if envVars.RateLimit != 0 {
-		cfg.RateLimit = envVars.RateLimit
-	}
-
-	if envVars.IsHTTPS {
-		cfg.IsHTTPS = envVars.IsHTTPS
-	}
+	cfg := defaultAgent
+	mergeConfigs(&cfg, jsonCfg, fl, envVars)
 
 	if cfg.CryptoKeyPath != "" {
 		pemBlock, err := crypto.ParsePEMFile(cfg.CryptoKeyPath)

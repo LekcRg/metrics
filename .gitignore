@@ -31,3 +31,5 @@ vendor/
 # Other
 store.json
 /keys/
+server.json
+agent.json

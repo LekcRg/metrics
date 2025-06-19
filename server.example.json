@@ -1,0 +1,10 @@
+{
+  "dev": true,
+  "log_lvl": "debug",
+  "address": "localhost:8080",
+  "store_interval": 300,
+  "restore": false,
+  "database_dsn": "postgresql://postgres:postgres@localhost:5432/metrics",
+  "hmac_key": "secret_key",
+  "crypto_key": "./keys/priv.pem"
+}
