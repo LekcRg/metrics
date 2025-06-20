@@ -26,11 +26,16 @@ func PrintBuildInfo() {
 	fmt.Println("Build commit: " + buildCommit)
 }
 
-func exit(cancel context.CancelFunc) {
+func exit(exited chan any,
+	s *sender.Sender, m *monitoring.MonitoringStats) {
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-sigChan
-	cancel()
+	logger.Log.Info("Stopping, wait end of requests")
+	m.Shutdown()
+	s.Shutdown()
+
+	exited <- true
 }
 
 func main() {
@@ -41,7 +46,7 @@ func main() {
 	logger.Log.Info(cfgString)
 
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 
 	monitor := monitoring.New(config.PollInterval)
 	send := sender.New(config, monitor)
@@ -49,7 +54,10 @@ func main() {
 	send.Start(ctx, &wg)
 	monitor.Start(ctx, &wg)
 
-	go exit(cancel)
+	exited := make(chan any, 1)
+	go exit(exited, send, monitor)
 	wg.Wait()
+
+	<-exited
 	logger.Log.Info("Buy, 👋!")
 }

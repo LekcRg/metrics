@@ -21,13 +21,16 @@ import (
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/retry"
 	"github.com/LekcRg/metrics/internal/server/storage"
+	"go.uber.org/zap"
 )
 
 type Sender struct {
 	monitor   *monitoring.MonitoringStats
 	jobs      chan []byte
+	shutdown  chan bool
 	url       string
 	config    config.AgentConfig
+	wg        sync.WaitGroup
 	countSent int
 }
 
@@ -47,6 +50,7 @@ func New(
 		monitor:   monitor,
 		countSent: 0,
 		jobs:      make(chan []byte),
+		shutdown:  make(chan bool, 1),
 	}
 }
 
@@ -109,7 +113,12 @@ func (s *Sender) postRequest(ctx context.Context, argBody []byte) error {
 
 func (s *Sender) postRequestWorker(ctx context.Context) {
 	for data := range s.jobs {
-		s.postRequest(ctx, data)
+		s.wg.Add(1)
+		err := s.postRequest(ctx, data)
+		if err != nil {
+			logger.Log.Error("Error by PostRequest", zap.Error(err))
+		}
+		s.wg.Done()
 	}
 }
 
@@ -199,19 +208,26 @@ func (s *Sender) Start(ctx context.Context, wg *sync.WaitGroup) {
 		s.sendAllMetrics(ctx)
 		s.sendPollCount(ctx)
 
-		for {
+		done := false
+		for !done {
 			select {
-			case <-ctx.Done():
-				logger.Log.Info("Stop sending metrics")
-				close(s.jobs)
-				ticker.Stop()
-				wg.Done()
-				return
+			case <-s.shutdown:
+				done = true
+				s.wg.Wait()
 			case <-s.monitor.PollSignal:
 				s.sendPollCount(ctx)
 			case <-ticker.C:
 				s.sendAllMetrics(ctx)
 			}
 		}
+
+		close(s.jobs)
+		ticker.Stop()
+		logger.Log.Info("Stop sending metrics")
+		wg.Done()
 	}()
+}
+
+func (s *Sender) Shutdown() {
+	close(s.shutdown)
 }

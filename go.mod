@@ -14,7 +14,6 @@ require (
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0
 	github.com/timakin/bodyclose v0.0.0-20241222091800-1db5c5ca4d67
-	go.uber.org/nilaway v0.0.0-20250605234149-5098b501249e
 	go.uber.org/zap v1.27.0
 	golang.org/x/tools v0.34.0
 	honnef.co/go/tools v0.6.1

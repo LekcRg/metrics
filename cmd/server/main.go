@@ -32,12 +32,17 @@ func PrintBuildInfo() {
 	fmt.Println("Build commit: " + buildCommit)
 }
 
-func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage) {
+func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage, exited chan any) {
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-sigChan
 	cancel()
 
+	if server != nil {
+		if err := server.Shutdown(context.Background()); err != nil {
+			logger.Log.Error("HTTP close error")
+		}
+	}
 	if store != nil {
 		err := store.Save(context.Background())
 		if err != nil {
@@ -45,11 +50,8 @@ func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db
 		}
 	}
 	db.Close()
-	if server != nil {
-		if err := server.Close(); err != nil {
-			logger.Log.Error("HTTP close error")
-		}
-	}
+
+	exited <- true
 }
 
 func main() {
@@ -106,7 +108,8 @@ func main() {
 		Handler: router,
 	}
 
-	go exit(cancel, server, store, db)
+	exited := make(chan any, 1)
+	go exit(cancel, server, store, db, exited)
 
 	err = server.ListenAndServe()
 	if err != http.ErrServerClosed {
@@ -114,5 +117,6 @@ func main() {
 	}
 
 	wg.Wait()
+	<-exited
 	logger.Log.Info("Buy, 👋!")
 }

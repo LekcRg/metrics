@@ -10,6 +10,7 @@ import (
 	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
+	"go.uber.org/zap"
 )
 
 func validateSHA256(w http.ResponseWriter, r *http.Request,
@@ -87,21 +88,21 @@ func PostMany(s MetricUpdater, key string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := validateAndGetBody(w, r)
 		if err != nil {
-			logger.Log.Error("/update: body reading error " + err.Error())
+			logger.Log.Error("/update: body reading error", zap.Error(err))
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
 		err = validateSHA256(w, r, body, key)
 		if err != nil {
-			logger.Log.Error("Error while validating SHA256 hash " + err.Error())
+			logger.Log.Error("Error while validating SHA256 hash ", zap.Error(err))
 			return
 		}
 
 		var parsedBody []models.Metrics
 		err = json.Unmarshal(body, &parsedBody)
 		if err != nil {
-			logger.Log.Error("error while unmarshal json")
+			logger.Log.Error("error while unmarshal json", zap.Error(err))
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}

@@ -20,6 +20,7 @@ type MonitoringStats struct {
 	PollSignal   chan any
 	runtimeStats StatsMap
 	gopsStats    StatsMap
+	shutdown     chan bool
 	PollInterval int
 	mu           sync.RWMutex
 }
@@ -28,6 +29,7 @@ func New(interval int) *MonitoringStats {
 	return &MonitoringStats{
 		PollInterval: interval,
 		PollSignal:   make(chan any),
+		shutdown:     make(chan bool, 2),
 		runtimeStats: make(StatsMap),
 		gopsStats:    make(StatsMap),
 	}
@@ -123,18 +125,23 @@ func (m *MonitoringStats) GetGopsStats() StatsMap {
 func (m *MonitoringStats) CreateTicker(
 	ctx context.Context, wg *sync.WaitGroup, tfunc func(),
 ) {
+	wg.Add(1)
 	ticker := time.NewTicker(time.Duration(m.PollInterval) * time.Second)
-	for {
+	done := false
+	for !done {
 		select {
 		case <-ctx.Done():
-			logger.Log.Info("Stop monitoring ticker")
-			ticker.Stop()
-			wg.Done()
-			return
+			done = true
+		case <-m.shutdown:
+			done = true
 		case <-ticker.C:
 			tfunc()
 		}
 	}
+
+	logger.Log.Info("Stop monitoring ticker")
+	ticker.Stop()
+	wg.Done()
 }
 
 func (m *MonitoringStats) Start(
@@ -144,7 +151,10 @@ func (m *MonitoringStats) Start(
 	m.saveGopsStats()
 	m.saveRuntimeStats()
 
-	wg.Add(2)
 	go m.CreateTicker(ctx, wg, m.saveRuntimeStats)
 	go m.CreateTicker(ctx, wg, m.saveGopsStats)
+}
+
+func (m *MonitoringStats) Shutdown() {
+	close(m.shutdown)
 }

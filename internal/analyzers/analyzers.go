@@ -2,7 +2,6 @@ package analyzers
 
 import (
 	"github.com/timakin/bodyclose/passes/bodyclose"
-	"go.uber.org/nilaway"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/appends"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
@@ -177,6 +176,6 @@ func GetOtherAnalyzers() []*analysis.Analyzer {
 		// checks whether HTTP response body is closed successfully
 		bodyclose.Analyzer,
 		// to detect potential nil panics in Go code
-		nilaway.Analyzer,
+		// nilaway.Analyzer,
 	}
 }

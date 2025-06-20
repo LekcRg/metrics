@@ -20,8 +20,8 @@ type CommonConfig struct {
 	LogLvl        string `env:"LOG_LVL" json:"log_lvl"`
 	Key           string `env:"KEY" json:"hmac_key"`
 	CryptoKeyPath string `env:"CRYPTO_KEY" json:"crypto_key"`
-	IsDev         bool   `env:"IS_DEV" json:"dev"`
 	Config        string `env:"CONFIG"`
+	IsDev         bool   `env:"IS_DEV" json:"dev"`
 }
 
 type ServerConfig struct {
@@ -138,7 +138,7 @@ func LoadServerCfg() ServerConfig {
 
 	var jsonCfg ServerConfig
 	if configPath != "" {
-		err := loadJSON(configPath, &jsonCfg)
+		err = loadJSON(configPath, &jsonCfg)
 		if err != nil {
 			fmt.Println("Error while getting json config\n", err.Error())
 		}
