@@ -40,7 +40,7 @@ func exit(exited chan any,
 
 func main() {
 	PrintBuildInfo()
-	config := config.LoadAgentCfg()
+	config := config.LoadAgentCfg(os.Args[1:]...)
 	logger.Initialize(config.LogLvl, config.IsDev)
 	cfgString := fmt.Sprintf("%+v\n", config)
 	logger.Log.Info(cfgString)

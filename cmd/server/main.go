@@ -56,7 +56,7 @@ func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db
 
 func main() {
 	PrintBuildInfo()
-	config := config.LoadServerCfg()
+	config := config.LoadServerCfg(os.Args[1:]...)
 	logger.Initialize(config.LogLvl, config.IsDev)
 	cfgString := fmt.Sprintf("%+v\n", config)
 	logger.Log.Info(cfgString)

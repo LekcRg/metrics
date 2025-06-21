@@ -56,7 +56,7 @@ var defaultServer = ServerConfig{
 	CommonConfig:    defaultCommon,
 	FileStoragePath: "store.json",
 	DatabaseDSN:     "",
-	StoreInterval:   300,
+	StoreInterval:   -1,
 	Restore:         false,
 	SyncSave:        false,
 }
@@ -69,16 +69,15 @@ var defaultAgent = AgentConfig{
 	IsHTTPS:        false,
 }
 
-func loadCommonCfg(cfg *CommonConfig) {
-	flag.StringVar(&cfg.Addr, "a", "", "address for run server")
-	flag.StringVar(&cfg.LogLvl, "log", "", "logging level")
-	flag.StringVar(&cfg.Key, "k", "", "key for SHA256")
-	flag.BoolVar(&cfg.IsDev, "dev", false, "is development")
-	flag.StringVar(&cfg.CryptoKeyPath, "crypto-key", "",
+func loadCommonFlags(flSet *flag.FlagSet, cfg *CommonConfig) {
+	flSet.StringVar(&cfg.Addr, "a", "", "address for run server")
+	flSet.StringVar(&cfg.LogLvl, "log", "", "logging level")
+	flSet.StringVar(&cfg.Key, "k", "", "key for SHA256")
+	flSet.BoolVar(&cfg.IsDev, "dev", false, "is development")
+	flSet.StringVar(&cfg.CryptoKeyPath, "crypto-key", "",
 		"Path to the PEM-encoded RSA key (public for agent, private for server)")
-	flag.StringVar(&cfg.Config, "config", "", "path to JSON config file Usage: -config/-c")
-	flag.StringVar(&cfg.Config, "c", "", "path to JSON config file Usage: -config/-c")
-	flag.Parse()
+	flSet.StringVar(&cfg.Config, "config", "", "path to JSON config file Usage: -config/-c")
+	flSet.StringVar(&cfg.Config, "c", "", "path to JSON config file Usage: -config/-c")
 }
 
 func loadJSON[T *ServerConfig | *AgentConfig](path string, cfg T) error {
@@ -115,25 +114,47 @@ func mergeConfigs[T ServerConfig | AgentConfig](cfg *T, jsonCfg, flCfg, envVars 
 	return nil
 }
 
-func LoadServerCfg() ServerConfig {
-	fl := ServerConfig{}
+func loadServerFlags(flSet *flag.FlagSet, fl *ServerConfig) {
+	flSet.IntVar(&fl.StoreInterval, "i", 0, "time is seconds to save db to store(file)")
+	flSet.StringVar(&fl.FileStoragePath, "f", "", "path to save store")
+	flSet.BoolVar(&fl.Restore, "r", false, "restore db from file")
+	flSet.StringVar(&fl.DatabaseDSN, "d", "", "Postgres database DSN")
+	loadCommonFlags(flSet, &fl.CommonConfig)
+}
 
-	flag.IntVar(&fl.StoreInterval, "i", 0, "time is seconds to save db to store(file)")
-	flag.StringVar(&fl.FileStoragePath, "f", "", "path to save store")
-	flag.BoolVar(&fl.Restore, "r", false, "restore db from file")
-	flag.StringVar(&fl.DatabaseDSN, "d", "", "Postgres database DSN")
-	loadCommonCfg(&fl.CommonConfig)
-	// flag.Parse() in loadCommonCfg()
+func parsePrivateKey(key string) *rsa.PrivateKey {
+	if key == "" {
+		return nil
+	}
 
-	var envVars ServerConfig
-	err := env.Parse(&envVars)
+	pemBlock, err := crypto.ParsePEMFile(key)
+	if err != nil {
+		panic("error while parse pem\n" + err.Error())
+	}
+
+	priv, err := x509.ParsePKCS1PrivateKey(pemBlock)
+	if err != nil {
+		panic("error while parse pem\n" + err.Error())
+	}
+
+	return priv
+}
+
+func LoadServerCfg(args ...string) ServerConfig {
+	flCfg := ServerConfig{}
+	flSet := flag.NewFlagSet("server", flag.ContinueOnError)
+	loadServerFlags(flSet, &flCfg)
+	flSet.Parse(args)
+
+	var envCfg ServerConfig
+	err := env.Parse(&envCfg)
 	if err != nil {
 		logger.Log.Error("Error env vars")
 	}
 
-	configPath := envVars.Config
+	configPath := envCfg.Config
 	if configPath == "" {
-		configPath = fl.Config
+		configPath = flCfg.Config
 	}
 
 	var jsonCfg ServerConfig
@@ -145,7 +166,7 @@ func LoadServerCfg() ServerConfig {
 	}
 
 	cfg := defaultServer
-	err = mergeConfigs(&cfg, jsonCfg, fl, envVars)
+	err = mergeConfigs(&cfg, jsonCfg, flCfg, envCfg)
 	if err != nil {
 		panic("merge err\n" + err.Error())
 	}
@@ -153,35 +174,46 @@ func LoadServerCfg() ServerConfig {
 	if cfg.DatabaseDSN != "" {
 		cfg.Restore = false
 	} else {
+		fmt.Printf("!!!!!!!!!!! %t\n", cfg.StoreInterval == 0)
 		cfg.SyncSave = cfg.StoreInterval == 0
 	}
 
-	if cfg.CryptoKeyPath != "" {
-		pemBlock, err := crypto.ParsePEMFile(cfg.CryptoKeyPath)
-		if err != nil {
-			panic("error while parse pem\n" + err.Error())
-		}
-
-		priv, err := x509.ParsePKCS1PrivateKey(pemBlock)
-		if err != nil {
-			panic("error while parse pem\n" + err.Error())
-		}
-
-		cfg.PrivateKey = priv
-	}
+	cfg.PrivateKey = parsePrivateKey(cfg.CryptoKeyPath)
 
 	return cfg
 }
 
-func LoadAgentCfg() AgentConfig {
-	fl := AgentConfig{}
+func loadAgentFlags(flSet *flag.FlagSet, fl *AgentConfig) {
+	flSet.IntVar(&fl.ReportInterval, "r", 0, "interval for sending runtime metrics")
+	flSet.IntVar(&fl.PollInterval, "p", 0, "interval for getting runtime metrics")
+	flSet.IntVar(&fl.RateLimit, "l", 0, "rate limit requests")
+	flSet.BoolVar(&fl.IsHTTPS, "s", false, "https true/false, default false")
+	loadCommonFlags(flSet, &fl.CommonConfig)
+}
 
-	flag.IntVar(&fl.ReportInterval, "r", 0, "interval for sending runtime metrics")
-	flag.IntVar(&fl.PollInterval, "p", 0, "interval for getting runtime metrics")
-	flag.IntVar(&fl.RateLimit, "l", 0, "rate limit requests")
-	flag.BoolVar(&fl.IsHTTPS, "s", false, "https true/false, default false")
-	loadCommonCfg(&fl.CommonConfig)
-	// flag.Parse() in loadCommonCfg()
+func parsePublicKey(key string) *rsa.PublicKey {
+	if key == "" {
+		return nil
+	}
+
+	pemBlock, err := crypto.ParsePEMFile(key)
+	if err != nil {
+		panic("error while parse pem\n" + err.Error())
+	}
+
+	pub, err := x509.ParsePKCS1PublicKey(pemBlock)
+	if err != nil {
+		panic("error while parse pem\n" + err.Error())
+	}
+
+	return pub
+}
+
+func LoadAgentCfg(args ...string) AgentConfig {
+	flCfg := AgentConfig{}
+	flSet := flag.NewFlagSet("agent", flag.ContinueOnError)
+	loadAgentFlags(flSet, &flCfg)
+	flSet.Parse(args)
 
 	var envVars AgentConfig
 	err := env.Parse(&envVars)
@@ -191,7 +223,7 @@ func LoadAgentCfg() AgentConfig {
 
 	configPath := envVars.Config
 	if configPath == "" {
-		configPath = fl.Config
+		configPath = flCfg.Config
 	}
 
 	var jsonCfg AgentConfig
@@ -203,21 +235,9 @@ func LoadAgentCfg() AgentConfig {
 	}
 
 	cfg := defaultAgent
-	mergeConfigs(&cfg, jsonCfg, fl, envVars)
+	mergeConfigs(&cfg, jsonCfg, flCfg, envVars)
 
-	if cfg.CryptoKeyPath != "" {
-		pemBlock, err := crypto.ParsePEMFile(cfg.CryptoKeyPath)
-		if err != nil {
-			panic("error while parse pem\n" + err.Error())
-		}
-
-		pub, err := x509.ParsePKCS1PublicKey(pemBlock)
-		if err != nil {
-			panic("error while parse pem\n" + err.Error())
-		}
-
-		cfg.PublicKey = pub
-	}
+	cfg.PublicKey = parsePublicKey(cfg.CryptoKeyPath)
 
 	return cfg
 }
