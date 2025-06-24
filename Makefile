@@ -4,6 +4,11 @@ PKG := ./...
 SERVER_PATH := ./cmd/server
 AGENT_PATH := ./cmd/agent
 
+BUILD_VERSION := v0.0.20
+DATE := $(shell date -u +"%d %b %y %H:%M %z")
+COMMIT := $(shell git log --pretty=format:%Creset%s --no-merges -1)
+ldflags := -ldflags="-X 'main.buildVersion=$(BUILD_VERSION)' -X 'main.buildDate=$(DATE)' -X 'main.buildCommit=$(COMMIT)'"
+
 .PHONY: all build run test cover fmt lint mocks clean
 
 all: build
@@ -22,12 +27,10 @@ build-staticlint:
 	go build -o cmd/staticlint/staticlint ./cmd/staticlint/
 
 release-server:
-	go generate $(SERVER_PATH)
-	go build -o $(SERVER_PATH)/server $(SERVER_PATH)
+	go build $(ldflags) -o $(SERVER_PATH)/server $(SERVER_PATH)
 
 release-agent:
-	go generate $(AGENT_PATH)
-	go build -o $(AGENT_PATH)/agent $(AGENT_PATH)
+	go build $(ldflags) -o $(AGENT_PATH)/agent $(AGENT_PATH)
 
 staticlint:
 	go vet -vettool=$(which statictest) ./...

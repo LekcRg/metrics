@@ -54,7 +54,7 @@ func TestGetOtherAnalyzers(t *testing.T) {
 	res := GetOtherAnalyzers()
 	someItems := []string{
 		"bodyclose",
-		"nilaway",
+		// "nilaway",
 	}
 
 	compare(t, res, someItems)

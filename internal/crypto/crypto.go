@@ -4,7 +4,10 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 )
+
+var ErrPEMIsNil = errors.New("pem block is nil")
 
 // GenerateHMAC возвращает строковое представление HMAC-SHA256 для заданных данных и ключа.
 func GenerateHMAC(content []byte, key string) string {

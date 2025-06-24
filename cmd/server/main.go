@@ -20,14 +20,29 @@ import (
 	"github.com/LekcRg/metrics/internal/server/storage/postgres"
 )
 
-//go:generate go run ../prebuild/prebuild.go -version 0.20
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
 
-func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage) {
+func PrintBuildInfo() {
+	fmt.Println("Build version: " + buildVersion)
+	fmt.Println("Build date: " + buildDate)
+	fmt.Println("Build commit: " + buildCommit)
+}
+
+func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db storage.Storage, exited chan any) {
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-sigChan
 	cancel()
 
+	if server != nil {
+		if err := server.Shutdown(context.Background()); err != nil {
+			logger.Log.Error("HTTP close error")
+		}
+	}
 	if store != nil {
 		err := store.Save(context.Background())
 		if err != nil {
@@ -35,15 +50,13 @@ func exit(cancel context.CancelFunc, server *http.Server, store *store.Store, db
 		}
 	}
 	db.Close()
-	if server != nil {
-		if err := server.Close(); err != nil {
-			logger.Log.Error("HTTP close error")
-		}
-	}
+
+	exited <- true
 }
 
 func main() {
-	config := config.LoadServerCfg()
+	PrintBuildInfo()
+	config := config.LoadServerCfg(os.Args[1:]...)
 	logger.Initialize(config.LogLvl, config.IsDev)
 	cfgString := fmt.Sprintf("%+v\n", config)
 	logger.Log.Info(cfgString)
@@ -95,7 +108,8 @@ func main() {
 		Handler: router,
 	}
 
-	go exit(cancel, server, store, db)
+	exited := make(chan any, 1)
+	go exit(cancel, server, store, db, exited)
 
 	err = server.ListenAndServe()
 	if err != http.ErrServerClosed {
@@ -103,5 +117,6 @@ func main() {
 	}
 
 	wg.Wait()
+	<-exited
 	logger.Log.Info("Buy, 👋!")
 }
