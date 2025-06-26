@@ -7,7 +7,10 @@ AGENT_PATH := ./cmd/agent
 BUILD_VERSION := v0.0.20
 DATE := $(shell date -u +"%d %b %y %H:%M %z")
 COMMIT := $(shell git log --pretty=format:%Creset%s --no-merges -1)
-ldflags := -ldflags="-X 'main.buildVersion=$(BUILD_VERSION)' -X 'main.buildDate=$(DATE)' -X 'main.buildCommit=$(COMMIT)'"
+ldflags := -ldflags="\
+	-X 'github.com/LekcRg/metrics/internal/buildinfo.BuildVersion=$(BUILD_VERSION)' \
+	-X 'github.com/LekcRg/metrics/internal/buildinfo.BuildDate=$(DATE)' \
+	-X 'github.com/LekcRg/metrics/internal/buildinfo.BuildCommit=$(COMMIT)'"
 
 .PHONY: all build run test cover fmt lint mocks clean
 

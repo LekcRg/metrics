@@ -174,7 +174,6 @@ func LoadServerCfg(args ...string) ServerConfig {
 	if cfg.DatabaseDSN != "" {
 		cfg.Restore = false
 	} else {
-		fmt.Printf("!!!!!!!!!!! %t\n", cfg.StoreInterval == 0)
 		cfg.SyncSave = cfg.StoreInterval == 0
 	}
 
