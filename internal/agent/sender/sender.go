@@ -3,23 +3,17 @@ package sender
 
 import (
 	"context"
-	crand "crypto/rand"
-	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"math/rand/v2"
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/LekcRg/metrics/internal/agent/monitoring"
-	"github.com/LekcRg/metrics/internal/cgzip"
+	"github.com/LekcRg/metrics/internal/agent/req"
 	"github.com/LekcRg/metrics/internal/config"
-	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/retry"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"go.uber.org/zap"
 )
@@ -54,70 +48,24 @@ func New(
 	}
 }
 
-func (s *Sender) postRequest(ctx context.Context, argBody []byte) error {
-	var err error
-	body := argBody
-
-	if s.config.PublicKey != nil {
-		body, err = rsa.EncryptPKCS1v15(crand.Reader, s.config.PublicKey, body)
-		if err != nil {
-			return err
-		}
-	}
-
-	req, err := cgzip.GetGzippedReq(ctx, s.url, body)
-	if err != nil {
-		logger.Log.Error("Error while getting gzipped request")
-		return err
-	}
-
-	if s.config.Key != "" {
-		sha := crypto.GenerateHMAC(body, s.config.Key)
-		req.Header.Set("HashSHA256", sha)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	var resp *http.Response
-
-	err = retry.Retry(ctx, func() error {
-		resp, err = client.Do(req)
-		if err != nil {
-			return err
-		}
-
-		defer func() {
-			if resp != nil {
-				resp.Body.Close()
-			}
-		}()
-		return nil
-	})
-
-	if err != nil {
-		logger.Log.Error("Error making http request")
-		return err
-	}
-
-	if resp != nil && resp.StatusCode > 299 {
-		logger.Log.Warn("Server answered with status code: " +
-			strconv.Itoa(resp.StatusCode))
-		return fmt.Errorf("invalid status code")
-	}
-
-	s.countSent++
-	logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
-
-	return nil
-}
-
 func (s *Sender) postRequestWorker(ctx context.Context) {
 	for data := range s.jobs {
 		s.wg.Add(1)
-		err := s.postRequest(ctx, data)
+		err := req.PostRequest(req.PostRequestArgs{
+			Body:   data,
+			Ctx:    ctx,
+			Config: s.config,
+			URL:    s.url,
+		})
+
 		if err != nil {
 			logger.Log.Error("Error by PostRequest", zap.Error(err))
+			s.wg.Done()
+			return
 		}
+
+		s.countSent++
+		logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
 		s.wg.Done()
 	}
 }
@@ -196,6 +144,14 @@ func (s *Sender) startWorkerPool(ctx context.Context) {
 	}
 }
 
+func (s *Sender) shutdownSender(wg *sync.WaitGroup) {
+	logger.Log.Info("waiting...")
+	s.wg.Wait()
+	close(s.jobs)
+	logger.Log.Info("Stop sending metrics")
+	wg.Done()
+}
+
 func (s *Sender) Start(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 
@@ -208,23 +164,18 @@ func (s *Sender) Start(ctx context.Context, wg *sync.WaitGroup) {
 		s.sendAllMetrics(ctx)
 		s.sendPollCount(ctx)
 
-		done := false
-		for !done {
+		for {
 			select {
 			case <-s.shutdown:
-				done = true
-				s.wg.Wait()
+				go s.shutdownSender(wg)
+				ticker.Stop()
+				return
 			case <-s.monitor.PollSignal:
 				s.sendPollCount(ctx)
 			case <-ticker.C:
 				s.sendAllMetrics(ctx)
 			}
 		}
-
-		close(s.jobs)
-		ticker.Stop()
-		logger.Log.Info("Stop sending metrics")
-		wg.Done()
 	}()
 }
 

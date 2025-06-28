@@ -1,4 +1,4 @@
-package sender
+package req
 
 import (
 	"context"
@@ -7,14 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/LekcRg/metrics/internal/agent/monitoring"
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSender_postRequest(t *testing.T) {
+func TestPostRequest(t *testing.T) {
 	tests := []struct {
 		name      string
 		key       string
@@ -62,17 +61,18 @@ func TestSender_postRequest(t *testing.T) {
 				w.WriteHeader(tt.resStatus)
 				w.Write([]byte("test"))
 			}))
-			s := &Sender{
-				url:     svr.URL,
-				monitor: &monitoring.MonitoringStats{},
-				config: config.AgentConfig{
+
+			err := PostRequest(PostRequestArgs{
+				Ctx:  ctx,
+				URL:  svr.URL,
+				Body: body,
+				Config: config.AgentConfig{
 					CommonConfig: config.CommonConfig{
 						Key: tt.key,
 					},
 				},
-			}
+			})
 
-			err := s.postRequest(ctx, body)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
