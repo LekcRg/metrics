@@ -7,10 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 
 	"dario.cat/mergo"
 	"github.com/LekcRg/metrics/internal/crypto"
+	"github.com/LekcRg/metrics/internal/ip"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/caarlos0/env/v11"
 )
@@ -25,9 +27,11 @@ type CommonConfig struct {
 }
 
 type ServerConfig struct {
+	PrivateKey      *rsa.PrivateKey
+	TrustedNetwork  *netip.Prefix
 	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"store_file"`
 	DatabaseDSN     string `env:"DATABASE_DSN" json:"database_dsn"`
-	PrivateKey      *rsa.PrivateKey
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 	CommonConfig
 	StoreInterval int  `env:"STORE_INTERVAL" envDefault:"-1" json:"store_interval"`
 	Restore       bool `env:"RESTORE" json:"restore"`
@@ -36,6 +40,7 @@ type ServerConfig struct {
 
 type AgentConfig struct {
 	PublicKey *rsa.PublicKey
+	IP        string
 	CommonConfig
 	ReportInterval int  `env:"REPORT_INTERVAL" json:"report_interval"`
 	PollInterval   int  `env:"POLL_INTERVAL" json:"poll_interval"`
@@ -119,6 +124,7 @@ func loadServerFlags(flSet *flag.FlagSet, fl *ServerConfig) {
 	flSet.StringVar(&fl.FileStoragePath, "f", "", "path to save store")
 	flSet.BoolVar(&fl.Restore, "r", false, "restore db from file")
 	flSet.StringVar(&fl.DatabaseDSN, "d", "", "Postgres database DSN")
+	flSet.StringVar(&fl.TrustedSubnet, "t", "", "Trusted subnet in CIDR notation (e.g., 192.168.1.0/24)")
 	loadCommonFlags(flSet, &fl.CommonConfig)
 }
 
@@ -179,6 +185,14 @@ func LoadServerCfg(args ...string) ServerConfig {
 
 	cfg.PrivateKey = parsePrivateKey(cfg.CryptoKeyPath)
 
+	if cfg.TrustedSubnet != "" {
+		network, err := netip.ParsePrefix(cfg.TrustedSubnet)
+		if err != nil {
+			panic(err)
+		}
+		cfg.TrustedNetwork = &network
+	}
+
 	return cfg
 }
 
@@ -227,7 +241,7 @@ func LoadAgentCfg(args ...string) AgentConfig {
 
 	var jsonCfg AgentConfig
 	if configPath != "" {
-		err := loadJSON(configPath, &jsonCfg)
+		err = loadJSON(configPath, &jsonCfg)
 		if err != nil {
 			fmt.Println("Error while getting json config\n", err.Error())
 		}
@@ -237,6 +251,11 @@ func LoadAgentCfg(args ...string) AgentConfig {
 	mergeConfigs(&cfg, jsonCfg, flCfg, envVars)
 
 	cfg.PublicKey = parsePublicKey(cfg.CryptoKeyPath)
+
+	cfg.IP, err = ip.GetOutboundIP()
+	if err != nil {
+		panic(err)
+	}
 
 	return cfg
 }

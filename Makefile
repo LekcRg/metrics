@@ -16,6 +16,12 @@ ldflags := -ldflags="\
 
 all: build
 
+run-agent:
+	go run ./cmd/agent -c=./agent.json
+
+run-server:
+	go run ./cmd/server -c=./server.json
+
 build:
 	go build -o $(AGENT_PATH)/agent $(.AGENT_PATH)
 	go build -o $(SERVER_PATH)/server $(SERVER_PATH)

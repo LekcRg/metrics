@@ -51,22 +51,28 @@ func New(
 func (s *Sender) postRequestWorker(ctx context.Context) {
 	for data := range s.jobs {
 		s.wg.Add(1)
-		err := req.PostRequest(req.PostRequestArgs{
-			Body:   data,
-			Ctx:    ctx,
-			Config: s.config,
-			URL:    s.url,
-		})
+		func() {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			defer func() {
+				s.wg.Done()
+				cancel()
+			}()
+			err := req.PostRequest(req.PostRequestArgs{
+				Body:   data,
+				Ctx:    ctx,
+				Config: s.config,
+				URL:    s.url,
+			})
 
-		if err != nil {
-			logger.Log.Error("Error by PostRequest", zap.Error(err))
-			s.wg.Done()
-			return
-		}
+			if err != nil {
+				logger.Log.Error("Error by PostRequest", zap.Error(err))
+				return
+			}
 
-		s.countSent++
-		logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
-		s.wg.Done()
+			s.countSent++
+			logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
+		}()
 	}
 }
 

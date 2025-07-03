@@ -42,6 +42,9 @@ func PostRequest(args PostRequestArgs) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	if args.Config.IP != "" {
+		req.Header.Set("X-Real-IP", args.Config.IP)
+	}
 	client := &http.Client{}
 	var resp *http.Response
 
