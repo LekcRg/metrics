@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/LekcRg/metrics/internal/agent/monitoring"
+	"github.com/LekcRg/metrics/internal/agent/req"
 	"github.com/LekcRg/metrics/internal/agent/sender"
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/logger"
@@ -15,6 +16,7 @@ import (
 type App struct {
 	monitoring *monitoring.MonitoringStats
 	sender     *sender.Sender
+	grpc       *req.GRPCClient
 	config     config.AgentConfig
 }
 
@@ -25,10 +27,16 @@ func New() *App {
 	cfgString := fmt.Sprintf("%+v\n", cfg)
 	logger.Log.Info(cfgString)
 
+	var grpcCl *req.GRPCClient
+	if cfg.IsGRPC {
+		grpcCl = req.NewGRPCClient(cfg.Addr)
+	}
+
 	return &App{
 		monitoring: monitor,
-		sender:     sender.New(cfg, monitor),
+		sender:     sender.New(cfg, monitor, grpcCl),
 		config:     cfg,
+		grpc:       grpcCl,
 	}
 }
 

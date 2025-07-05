@@ -18,7 +18,6 @@ import (
 )
 
 type CommonConfig struct {
-	Addr          string `env:"ADDRESS" json:"address"`
 	LogLvl        string `env:"LOG_LVL" json:"log_lvl"`
 	Key           string `env:"KEY" json:"hmac_key"`
 	CryptoKeyPath string `env:"CRYPTO_KEY" json:"crypto_key"`
@@ -29,6 +28,8 @@ type CommonConfig struct {
 type ServerConfig struct {
 	PrivateKey      *rsa.PrivateKey
 	TrustedNetwork  *netip.Prefix
+	Addr            string `env:"ADDRESS" json:"address"`
+	GRPCAddr        string `env:"GRPC_ADDR" json:"grpc_addr"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"store_file"`
 	DatabaseDSN     string `env:"DATABASE_DSN" json:"database_dsn"`
 	TrustedSubnet   string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
@@ -41,15 +42,16 @@ type ServerConfig struct {
 type AgentConfig struct {
 	PublicKey *rsa.PublicKey
 	IP        string
+	Addr      string `env:"ADDRESS" json:"address"`
 	CommonConfig
 	ReportInterval int  `env:"REPORT_INTERVAL" json:"report_interval"`
 	PollInterval   int  `env:"POLL_INTERVAL" json:"poll_interval"`
 	RateLimit      int  `env:"RATE_LIMIT" json:"rate_limit"`
 	IsHTTPS        bool `env:"IS_HTTPS" json:"https"`
+	IsGRPC         bool `env:"IS_GRPC" json:"is_grpc"`
 }
 
 var defaultCommon = CommonConfig{
-	Addr:          "localhost:8080",
 	LogLvl:        "debug",
 	Key:           "",
 	CryptoKeyPath: "",
@@ -60,6 +62,8 @@ var defaultCommon = CommonConfig{
 var defaultServer = ServerConfig{
 	CommonConfig:    defaultCommon,
 	FileStoragePath: "store.json",
+	Addr:            "localhost:8080",
+	GRPCAddr:        ":3200",
 	DatabaseDSN:     "",
 	StoreInterval:   -1,
 	Restore:         false,
@@ -68,14 +72,15 @@ var defaultServer = ServerConfig{
 
 var defaultAgent = AgentConfig{
 	CommonConfig:   defaultCommon,
+	Addr:           "localhost:8080",
 	ReportInterval: 10,
 	PollInterval:   2,
 	RateLimit:      5,
 	IsHTTPS:        false,
+	IsGRPC:         false,
 }
 
 func loadCommonFlags(flSet *flag.FlagSet, cfg *CommonConfig) {
-	flSet.StringVar(&cfg.Addr, "a", "", "address for run server")
 	flSet.StringVar(&cfg.LogLvl, "log", "", "logging level")
 	flSet.StringVar(&cfg.Key, "k", "", "key for SHA256")
 	flSet.BoolVar(&cfg.IsDev, "dev", false, "is development")
@@ -120,11 +125,13 @@ func mergeConfigs[T ServerConfig | AgentConfig](cfg *T, jsonCfg, flCfg, envVars 
 }
 
 func loadServerFlags(flSet *flag.FlagSet, fl *ServerConfig) {
+	flSet.StringVar(&fl.Addr, "a", "", "address for run server")
 	flSet.IntVar(&fl.StoreInterval, "i", 0, "time is seconds to save db to store(file)")
 	flSet.StringVar(&fl.FileStoragePath, "f", "", "path to save store")
 	flSet.BoolVar(&fl.Restore, "r", false, "restore db from file")
 	flSet.StringVar(&fl.DatabaseDSN, "d", "", "Postgres database DSN")
 	flSet.StringVar(&fl.TrustedSubnet, "t", "", "Trusted subnet in CIDR notation (e.g., 192.168.1.0/24)")
+	flSet.StringVar(&fl.GRPCAddr, "g", "", "GRPC address")
 	loadCommonFlags(flSet, &fl.CommonConfig)
 }
 
@@ -201,6 +208,8 @@ func loadAgentFlags(flSet *flag.FlagSet, fl *AgentConfig) {
 	flSet.IntVar(&fl.PollInterval, "p", 0, "interval for getting runtime metrics")
 	flSet.IntVar(&fl.RateLimit, "l", 0, "rate limit requests")
 	flSet.BoolVar(&fl.IsHTTPS, "s", false, "https true/false, default false")
+	flSet.BoolVar(&fl.IsGRPC, "g", false, "metrics will be sent via GRPC")
+	flSet.StringVar(&fl.Addr, "a", "", "server address (http/grpc)")
 	loadCommonFlags(flSet, &fl.CommonConfig)
 }
 

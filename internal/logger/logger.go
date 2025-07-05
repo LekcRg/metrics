@@ -1,11 +1,14 @@
 package logger
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // Log глобальный zap-логгер, инициализируемый через Initialize.
@@ -34,6 +37,22 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	// записываем код статуса, используя оригинальный http.ResponseWriter
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode // захватываем код статуса
+}
+
+func InterceptorLogger(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	startTime := time.Now()
+	md, ok := metadata.FromIncomingContext(ctx)
+
+	h, err := handler(ctx, req)
+	Log.Info("got incoming GRPC request",
+		zap.Bool("ok", ok),
+		zap.String("Method", info.FullMethod),
+		zap.Duration("time", time.Since(startTime)),
+		zap.Any("md", md),
+		zap.Error(err),
+	)
+
+	return h, err
 }
 
 // Initialize конфигурирует Log по уровню логирования и режиму.

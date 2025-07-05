@@ -1,6 +1,6 @@
 {
   "dev": true,
-  "address": "localhost:8080",
+  "address": ":3200",
   "log_lvl": "debug",
   "hmac_key": "secret_key",
   "poll_interval": 2,
@@ -8,5 +8,6 @@
   "rate_limit": 5,
   "https": false,
   "restore": false,
-  "crypto_key": "./keys/pub.pem"
+  "crypto_key": "./keys/pub.pem",
+  "is_grpc": true
 }

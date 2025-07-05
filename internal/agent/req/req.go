@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -11,33 +12,40 @@ import (
 	"github.com/LekcRg/metrics/internal/cgzip"
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/crypto"
+	"github.com/LekcRg/metrics/internal/logger"
+	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/retry"
 )
 
-type PostRequestArgs struct {
-	Ctx    context.Context
-	URL    string
-	Body   []byte
-	Config config.AgentConfig
+type RequestArgs struct {
+	Ctx     context.Context
+	URL     string
+	Metrics []models.Metrics
+	Config  config.AgentConfig
 }
 
-func PostRequest(args PostRequestArgs) error {
+func HTTPRequest(args RequestArgs) error {
 	var err error
+	body, err := json.Marshal(args.Metrics)
+	if err != nil {
+		logger.Log.Error("Error while generate json")
+		return err
+	}
 
 	if args.Config.PublicKey != nil {
-		args.Body, err = rsa.EncryptPKCS1v15(rand.Reader, args.Config.PublicKey, args.Body)
+		body, err = rsa.EncryptPKCS1v15(rand.Reader, args.Config.PublicKey, body)
 		if err != nil {
 			return err
 		}
 	}
 
-	req, err := cgzip.GetGzippedReq(args.Ctx, args.URL, args.Body)
+	req, err := cgzip.GetGzippedReq(args.Ctx, args.URL, body)
 	if err != nil {
 		return err
 	}
 
 	if args.Config.Key != "" {
-		sha := crypto.GenerateHMAC(args.Body, args.Config.Key)
+		sha := crypto.GenerateHMAC(body, args.Config.Key)
 		req.Header.Set("HashSHA256", sha)
 	}
 

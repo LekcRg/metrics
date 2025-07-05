@@ -2,6 +2,7 @@ package req
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,11 +10,13 @@ import (
 
 	"github.com/LekcRg/metrics/internal/config"
 	"github.com/LekcRg/metrics/internal/crypto"
+	"github.com/LekcRg/metrics/internal/models"
+	"github.com/LekcRg/metrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestPostRequest(t *testing.T) {
+func TestHTTPRequest(t *testing.T) {
 	tests := []struct {
 		name      string
 		key       string
@@ -45,7 +48,16 @@ func TestPostRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-			body := []byte("test")
+			val := storage.Gauge(1.234)
+			metrics := []models.Metrics{
+				{
+					ID:    "test",
+					MType: "gauge",
+					Value: &val,
+				},
+			}
+			body, err := json.Marshal(metrics)
+			require.NoError(t, err)
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if tt.key != "" {
 					sha := crypto.GenerateHMAC(body, tt.key)
@@ -62,10 +74,10 @@ func TestPostRequest(t *testing.T) {
 				w.Write([]byte("test"))
 			}))
 
-			err := PostRequest(PostRequestArgs{
-				Ctx:  ctx,
-				URL:  svr.URL,
-				Body: body,
+			err = HTTPRequest(RequestArgs{
+				Ctx:     ctx,
+				URL:     svr.URL,
+				Metrics: metrics,
 				Config: config.AgentConfig{
 					CommonConfig: config.CommonConfig{
 						Key: tt.key,

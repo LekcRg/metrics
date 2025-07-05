@@ -40,7 +40,7 @@ func main() {
 	exited := make(chan any, 1)
 	go exit(cancel, app, exited)
 
-	app.Start()
+	app.Start(&wg)
 
 	wg.Wait()
 	<-exited

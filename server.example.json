@@ -7,5 +7,6 @@
   "database_dsn": "postgresql://postgres:postgres@localhost:5432/metrics",
   "hmac_key": "secret_key",
   "crypto_key": "./keys/priv.pem",
-  "trusted_subnet": "192.168.1.0/24"
+  "trusted_subnet": "192.168.1.0/24",
+  "grpc_addr": ":3200"
 }

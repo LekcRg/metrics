@@ -36,7 +36,7 @@ func runCommonConfigTests(t *testing.T, functest func(flags []string) CommonConf
 	}
 
 	isDevWithAddr := CommonConfig{
-		Addr:  "localhost:8080",
+		// Addr:  "localhost:8080",
 		IsDev: true,
 	}
 
@@ -108,7 +108,7 @@ func runCommonConfigTests(t *testing.T, functest func(flags []string) CommonConf
 			},
 			env: []string{"ADDRESS", "localhost:8080"},
 			want: CommonConfig{
-				Addr:   "localhost:8080",
+				// Addr:   "localhost:8080",
 				IsDev:  true,
 				LogLvl: "error",
 			},

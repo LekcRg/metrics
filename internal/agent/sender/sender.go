@@ -3,7 +3,6 @@ package sender
 
 import (
 	"context"
-	"encoding/json"
 	"math/rand/v2"
 	"strconv"
 	"sync"
@@ -20,7 +19,8 @@ import (
 
 type Sender struct {
 	monitor   *monitoring.MonitoringStats
-	jobs      chan []byte
+	grpc      *req.GRPCClient
+	jobs      chan []models.Metrics
 	shutdown  chan bool
 	url       string
 	config    config.AgentConfig
@@ -29,7 +29,9 @@ type Sender struct {
 }
 
 func New(
-	config config.AgentConfig, monitor *monitoring.MonitoringStats,
+	config config.AgentConfig,
+	monitor *monitoring.MonitoringStats,
+	grpcCl *req.GRPCClient,
 ) *Sender {
 	baseURL := config.Addr + "/updates/"
 	if config.IsHTTPS {
@@ -38,35 +40,52 @@ func New(
 		baseURL = "http://" + baseURL
 	}
 
+	if config.IsGRPC && grpcCl == nil {
+		logger.Log.Fatal("GRPC client is nil")
+	}
+
 	return &Sender{
 		url:       baseURL,
 		config:    config,
 		monitor:   monitor,
 		countSent: 0,
-		jobs:      make(chan []byte),
+		jobs:      make(chan []models.Metrics),
 		shutdown:  make(chan bool, 1),
+		grpc:      grpcCl,
 	}
 }
 
 func (s *Sender) postRequestWorker(ctx context.Context) {
 	for data := range s.jobs {
+		select {
+		case <-ctx.Done():
+			logger.Log.Info("Parent context cancelled, stopping worker")
+			return
+		default:
+		}
 		s.wg.Add(1)
 		func() {
 			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			reqCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer func() {
 				s.wg.Done()
 				cancel()
 			}()
-			err := req.PostRequest(req.PostRequestArgs{
-				Body:   data,
-				Ctx:    ctx,
-				Config: s.config,
-				URL:    s.url,
-			})
+			var err error
+			if s.config.IsGRPC {
+				err = s.grpc.GRPCRequest(ctx, data)
+			} else {
+				reqArgs := req.RequestArgs{
+					Metrics: data,
+					Ctx:     reqCtx,
+					Config:  s.config,
+					URL:     s.url,
+				}
+				err = req.HTTPRequest(reqArgs)
+			}
 
 			if err != nil {
-				logger.Log.Error("Error by PostRequest", zap.Error(err))
+				logger.Log.Error("Error by postRequestWorker", zap.Error(err))
 				return
 			}
 
@@ -74,16 +93,6 @@ func (s *Sender) postRequestWorker(ctx context.Context) {
 			logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
 		}()
 	}
-}
-
-func (s *Sender) SendMetrics(ctx context.Context, list []models.Metrics) {
-	jsonBody, err := json.Marshal(list)
-	if err != nil {
-		logger.Log.Error("Error while generate json")
-		return
-	}
-
-	s.jobs <- jsonBody
 }
 
 func (s *Sender) getRandomValue() storage.Gauge {
@@ -118,7 +127,7 @@ func (s *Sender) sendGaugeMetrics(
 		list = append(list, s.genMetricStruct("gauge", key, &sendVal, nil))
 	}
 
-	s.SendMetrics(ctx, list)
+	s.jobs <- list
 }
 
 func (s *Sender) sendPollCount(ctx context.Context) {
@@ -126,7 +135,7 @@ func (s *Sender) sendPollCount(ctx context.Context) {
 	pollCountStruct := s.genMetricStruct("counter", "PollCount", nil, &pollCountVal)
 	data := append([]models.Metrics{}, pollCountStruct)
 
-	s.SendMetrics(ctx, data)
+	s.jobs <- data
 }
 
 func (s *Sender) sendRandom(ctx context.Context) {
@@ -134,7 +143,7 @@ func (s *Sender) sendRandom(ctx context.Context) {
 	randomStruct := s.genMetricStruct("gauge", "RandomValue", &randomVal, nil)
 	data := append([]models.Metrics{}, randomStruct)
 
-	s.SendMetrics(ctx, data)
+	s.jobs <- data
 }
 
 func (s *Sender) sendAllMetrics(ctx context.Context) {

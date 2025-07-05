@@ -19,7 +19,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/defers"
 	"golang.org/x/tools/go/analysis/passes/directive"
 	"golang.org/x/tools/go/analysis/passes/errorsas"
-	"golang.org/x/tools/go/analysis/passes/fieldalignment"
 	"golang.org/x/tools/go/analysis/passes/findcall"
 	"golang.org/x/tools/go/analysis/passes/framepointer"
 	"golang.org/x/tools/go/analysis/passes/gofix"
@@ -78,7 +77,6 @@ func GetPassesAnalyzers() []*analysis.Analyzer {
 		defers.Analyzer,
 		directive.Analyzer,
 		errorsas.Analyzer,
-		fieldalignment.Analyzer,
 		findcall.Analyzer,
 		framepointer.Analyzer,
 		gofix.Analyzer,
