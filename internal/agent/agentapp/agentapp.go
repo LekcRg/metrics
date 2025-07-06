@@ -29,7 +29,7 @@ func New() *App {
 
 	var grpcCl *req.GRPCClient
 	if cfg.IsGRPC {
-		grpcCl = req.NewGRPCClient(cfg.Addr)
+		grpcCl = req.NewGRPCClient(cfg)
 	}
 
 	return &App{

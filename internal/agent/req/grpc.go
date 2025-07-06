@@ -4,22 +4,27 @@ import (
 	"context"
 	"errors"
 
+	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
 	pb "github.com/LekcRg/metrics/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
 )
 
 type GRPCClient struct {
 	conn   *grpc.ClientConn
 	client pb.MetricsClient
+	config config.AgentConfig
 }
 
-func NewGRPCClient(addr string) *GRPCClient {
+func NewGRPCClient(cfg config.AgentConfig) *GRPCClient {
 	conn, err := grpc.NewClient(
-		addr,
+		cfg.Addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -31,6 +36,7 @@ func NewGRPCClient(addr string) *GRPCClient {
 	return &GRPCClient{
 		conn:   conn,
 		client: client,
+		config: cfg,
 	}
 }
 
@@ -53,9 +59,22 @@ func (g *GRPCClient) GRPCRequest(ctx context.Context, metrics []models.Metrics) 
 		})
 	}
 
-	_, err := g.client.UpdateMetrics(ctx, &pb.UpdateMetricsRequest{
+	req := &pb.UpdateMetricsRequest{
 		Metrics: list,
-	})
+	}
+
+	if g.config.Key != "" {
+		b, err := proto.Marshal(req)
+		if err != nil {
+			logger.Log.Error("Error while marshal UpdateMetricsRequest pb", zap.Error(err))
+		}
+		sha := crypto.GenerateHMAC(b, g.config.Key)
+
+		md := metadata.New(map[string]string{"HashSHA256": sha})
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
+
+	_, err := g.client.UpdateMetrics(ctx, req)
 	return err
 }
 

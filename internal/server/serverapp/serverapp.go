@@ -88,7 +88,7 @@ func New(ctx context.Context, wg *sync.WaitGroup) (*App, error) {
 		Handler: router,
 	}
 
-	grpcServer := grpcapi.NewServer(metricService)
+	grpcServer := grpcapi.NewServer(metricService, config)
 
 	return &App{
 		config:     config,
