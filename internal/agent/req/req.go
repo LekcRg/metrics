@@ -2,8 +2,6 @@ package req
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -33,7 +31,7 @@ func HTTPRequest(args RequestArgs) error {
 	}
 
 	if args.Config.PublicKey != nil {
-		body, err = rsa.EncryptPKCS1v15(rand.Reader, args.Config.PublicKey, body)
+		body, err = crypto.EncryptRSA(body, args.Config.PublicKey)
 		if err != nil {
 			return err
 		}

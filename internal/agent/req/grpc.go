@@ -63,6 +63,22 @@ func (g *GRPCClient) GRPCRequest(ctx context.Context, metrics []models.Metrics) 
 		Metrics: list,
 	}
 
+	var enctypted []byte
+	if g.config.PublicKey != nil {
+		encryptedBytes, err := proto.Marshal(req)
+		if err != nil {
+			return err
+		}
+
+		enctypted, err = crypto.EncryptRSA(encryptedBytes, g.config.PublicKey)
+		if err != nil {
+			return err
+		}
+		req = &pb.UpdateMetricsRequest{
+			Encrypted: enctypted,
+		}
+	}
+
 	if g.config.Key != "" {
 		b, err := proto.Marshal(req)
 		if err != nil {

@@ -9,11 +9,9 @@ import (
 	"github.com/LekcRg/metrics/internal/models"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	pb "github.com/LekcRg/metrics/proto"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
@@ -30,7 +28,6 @@ type server struct {
 
 func NewServer(s MetricService, cfg config.ServerConfig) *grpc.Server {
 	grpcServer := grpc.NewServer(
-		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			logger.InterceptorLogger,
 		),
@@ -49,27 +46,21 @@ func NewServer(s MetricService, cfg config.ServerConfig) *grpc.Server {
 func (s *server) UpdateMetrics(
 	ctx context.Context, in *pb.UpdateMetricsRequest,
 ) (*pb.UpdateMetricsResponse, error) {
-	if s.config.Key != "" {
-		md, ok := metadata.FromIncomingContext(ctx)
-		headerHash := ""
-		if ok {
-			headerHash = md.Get("HashSHA256")[0]
+	err := crypto.GetAndValidHMAC(ctx, s.config.Key, in)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.config.PrivateKey != nil {
+		var b []byte
+		b, err = crypto.DecryptRSA(in.Encrypted, s.config.PrivateKey)
+		if err != nil {
+			return nil, status.Error(codes.PermissionDenied, "Permission denied")
 		}
 
-		if headerHash == "" {
-			return nil, status.Error(codes.PermissionDenied, "Empty HashSHA256")
-		}
-
-		ctx = metadata.NewOutgoingContext(ctx, md)
-
-		inBytes, err := proto.Marshal(in)
+		err = proto.Unmarshal(b, in)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Internal server error")
-		}
-
-		hash := crypto.GenerateHMAC(inBytes, s.config.Key)
-		if hash != headerHash {
-			return nil, status.Error(codes.PermissionDenied, "Hash is not correct")
 		}
 	}
 
@@ -88,7 +79,7 @@ func (s *server) UpdateMetrics(
 		})
 	}
 
-	err := s.service.UpdateMany(ctx, list)
+	err = s.service.UpdateMany(ctx, list)
 	if err != nil {
 		logger.Log.Error("Error from UpdateMany service", zap.Error(err))
 		return nil, status.Error(codes.Internal, "error from service")

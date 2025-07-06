@@ -138,6 +138,7 @@ func (x *Metric) GetDelta() int64 {
 type UpdateMetricsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Metrics       []*Metric              `protobuf:"bytes,1,rep,name=metrics,proto3" json:"metrics,omitempty"`
+	Encrypted     []byte                 `protobuf:"bytes,2,opt,name=encrypted,proto3" json:"encrypted,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,6 +176,13 @@ func (*UpdateMetricsRequest) Descriptor() ([]byte, []int) {
 func (x *UpdateMetricsRequest) GetMetrics() []*Metric {
 	if x != nil {
 		return x.Metrics
+	}
+	return nil
+}
+
+func (x *UpdateMetricsRequest) GetEncrypted() []byte {
+	if x != nil {
+		return x.Encrypted
 	}
 	return nil
 }
@@ -229,9 +237,10 @@ const file_proto_metric_proto_rawDesc = "" +
 	"\aCOUNTER\x10\x00\x12\t\n" +
 	"\x05GAUGE\x10\x01B\b\n" +
 	"\x06_valueB\b\n" +
-	"\x06_delta\"@\n" +
+	"\x06_delta\"^\n" +
 	"\x14UpdateMetricsRequest\x12(\n" +
-	"\ametrics\x18\x01 \x03(\v2\x0e.metric.MetricR\ametrics\"\x17\n" +
+	"\ametrics\x18\x01 \x03(\v2\x0e.metric.MetricR\ametrics\x12\x1c\n" +
+	"\tencrypted\x18\x02 \x01(\fR\tencrypted\"\x17\n" +
 	"\x15UpdateMetricsResponse2W\n" +
 	"\aMetrics\x12L\n" +
 	"\rUpdateMetrics\x12\x1c.metric.UpdateMetricsRequest\x1a\x1d.metric.UpdateMetricsResponseB!Z\x1fgithub.com/LekcRg/metrics/protob\x06proto3"
