@@ -31,6 +31,10 @@ func NewGRPCClient(cfg config.AgentConfig) *GRPCClient {
 		logger.Log.Fatal("GRPC Connect error", zap.Error(err))
 	}
 
+	return NewGRPCClientWithConn(conn, cfg)
+}
+
+func NewGRPCClientWithConn(conn *grpc.ClientConn, cfg config.AgentConfig) *GRPCClient {
 	client := pb.NewMetricsClient(conn)
 
 	return &GRPCClient{
