@@ -24,7 +24,7 @@ func GenerateHMAC(content []byte, key string) string {
 	return hex.EncodeToString(dst)
 }
 
-func GetAndValidHMAC(ctx context.Context, key string, in proto.Message) error {
+func GetAndValidHMACProto(ctx context.Context, key string, in proto.Message) error {
 	if key == "" {
 		return nil
 	}

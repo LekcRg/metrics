@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -164,5 +165,26 @@ func TestParsePEMFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 		})
+	}
+}
+
+func TestEncryptDecryptRSA(t *testing.T) {
+	privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+	publicKey := &privateKey.PublicKey
+
+	tests := [][]byte{
+		[]byte("Hello, World!"),
+		[]byte(""), // пустые данные
+		[]byte(strings.Repeat("long message", 50)),
+	}
+
+	for _, original := range tests {
+		encrypted, err := EncryptRSA(original, publicKey)
+		require.NoError(t, err)
+
+		decrypted, err := DecryptRSA(encrypted, privateKey)
+		require.NoError(t, err)
+
+		assert.Equal(t, original, decrypted)
 	}
 }

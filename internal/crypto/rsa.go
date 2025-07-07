@@ -14,12 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type RsaKey interface {
-	Size() int
-
-	*rsa.PrivateKey | *rsa.PublicKey
-}
-
 func EncryptRSA(data []byte, key *rsa.PublicKey) ([]byte, error) {
 	res := make([]byte, 0, len(data))
 

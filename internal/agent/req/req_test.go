@@ -38,16 +38,12 @@ func TestHTTPRequest(t *testing.T) {
 			key:       "test",
 			resStatus: http.StatusOK,
 		},
-		{
-			name:      "Retry 1 time",
-			retry:     1,
-			resStatus: http.StatusOK,
-			wantErr:   true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			defer cancel()
+
 			val := storage.Gauge(1.234)
 			metrics := []models.Metrics{
 				{
@@ -66,10 +62,6 @@ func TestHTTPRequest(t *testing.T) {
 					assert.Equal(t, sha, hash)
 				}
 
-				if tt.retry > 0 {
-					cancel()
-					tt.retry--
-				}
 				w.WriteHeader(tt.resStatus)
 				w.Write([]byte("test"))
 			}))

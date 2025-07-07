@@ -3,6 +3,7 @@ NO_MOCKS_COVERAGE_FILE := clean_cover.out
 PKG := ./...
 SERVER_PATH := ./cmd/server
 AGENT_PATH := ./cmd/agent
+p ?= ./...
 
 BUILD_VERSION := v0.0.20
 DATE := $(shell date -u +"%d %b %y %H:%M %z")
@@ -49,12 +50,11 @@ betteralign:
 	betteralign -apply -test_files ./...
 
 test:
-	go test ./... -v
+	go test $(p) -v
 
 cover:
 	go test -coverprofile=$(COVERAGE_FILE) ./...
-	grep -v "internal/mocks" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
-	# grep -Ev "internal/mocks|memstorage|postgres" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
+	grep -Ev "internal/mocks|proto" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
 	go tool cover -func=$(NO_MOCKS_COVERAGE_FILE)
 
 cover-ugly:
@@ -62,5 +62,5 @@ cover-ugly:
 	go tool cover -func=$(COVERAGE_FILE)
 
 cover-html:
-	go test -coverprofile=$(COVERAGE_FILE) ./...
+	go test -coverprofile=$(COVERAGE_FILE) $(p)
 	go tool cover -html=$(COVERAGE_FILE)

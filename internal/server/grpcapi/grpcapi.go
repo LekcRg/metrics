@@ -46,7 +46,7 @@ func NewServer(s MetricService, cfg config.ServerConfig) *grpc.Server {
 func (s *server) UpdateMetrics(
 	ctx context.Context, in *pb.UpdateMetricsRequest,
 ) (*pb.UpdateMetricsResponse, error) {
-	err := crypto.GetAndValidHMAC(ctx, s.config.Key, in)
+	err := crypto.GetAndValidHMACProto(ctx, s.config.Key, in)
 	if err != nil {
 		return nil, err
 	}

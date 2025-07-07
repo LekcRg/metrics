@@ -1,10 +1,20 @@
 package crypto
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	pb "github.com/LekcRg/metrics/proto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
+)
+
+const (
+	content = "Hello, world!"
+	key     = "Sup3rP4swd"
 )
 
 func TestGenerateHMAC(t *testing.T) {
@@ -17,9 +27,6 @@ func TestGenerateHMAC(t *testing.T) {
 		args args
 		want string
 	}
-
-	const content = "Hello, world!"
-	const key = "Sup3rP4swd"
 
 	tests := []test{
 		{
@@ -83,6 +90,78 @@ func TestGenerateHMAC(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := GenerateHMAC([]byte(tt.args.content), tt.args.key)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetAndValidHMACProto(t *testing.T) {
+	msg := &pb.UpdateMetricsRequest{
+		Metrics: []*pb.Metric{
+			{
+				Id: "test",
+			},
+		},
+	}
+	msgBytes, err := proto.Marshal(msg)
+	require.NoError(t, err)
+
+	type test struct {
+		name       string
+		customHash string
+		emptyKey   bool
+		genHash    bool
+		withoutMd  bool
+		wantErr    bool
+	}
+
+	tests := []test{
+		{
+			name:    "correct",
+			genHash: true,
+		},
+		{
+			name:      "without hash metadata",
+			withoutMd: true,
+			wantErr:   true,
+		},
+		{
+			name:       "empty hash",
+			customHash: "",
+			wantErr:    true,
+		},
+		{
+			name:       "invalid hash",
+			customHash: "invalid",
+			wantErr:    true,
+		},
+		{
+			name:     "emptyKey",
+			emptyKey: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hash := tt.customHash
+			if tt.genHash {
+				hash = GenerateHMAC(msgBytes, key)
+			}
+
+			ctx := context.Background()
+			if !tt.withoutMd {
+				md := metadata.New(map[string]string{"HashSHA256": hash})
+				ctx = metadata.NewIncomingContext(ctx, md)
+			}
+
+			ckey := key
+			if tt.emptyKey {
+				ckey = ""
+			}
+			err := GetAndValidHMACProto(ctx, ckey, msg)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
