@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package metric;
+
+option go_package = "github.com/LekcRg/metrics/proto";
+
+message Metric {
+  string id = 1;
+  enum Type {
+    COUNTER = 0;
+    GAUGE = 1;
+  };
+  Type m_type = 2;
+  optional double value = 3;
+  optional sint64 delta = 4;
+}
+
+message UpdateMetricsRequest {
+  repeated Metric metrics = 1;
+  bytes encrypted = 2;
+}
+
+message UpdateMetricsResponse {
+
+}
+
+service Metrics {
+  rpc UpdateMetrics(UpdateMetricsRequest) returns (UpdateMetricsResponse);
+}

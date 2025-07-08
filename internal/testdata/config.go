@@ -16,10 +16,10 @@ const defaultRestore = false
 // TODO: File with testData
 var TestServerConfig = config.ServerConfig{
 	CommonConfig: config.CommonConfig{
-		Addr:   defaultAddr,
 		LogLvl: defaultLogLvl,
 		IsDev:  defaultIsDev,
 	},
+	Addr:            defaultAddr,
 	StoreInterval:   defaultStoreInterval,
 	FileStoragePath: defaultFileStoragePath,
 	Restore:         defaultRestore,

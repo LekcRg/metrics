@@ -3,30 +3,24 @@ package sender
 
 import (
 	"context"
-	crand "crypto/rand"
-	"crypto/rsa"
-	"encoding/json"
-	"fmt"
 	"math/rand/v2"
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/LekcRg/metrics/internal/agent/monitoring"
-	"github.com/LekcRg/metrics/internal/cgzip"
+	"github.com/LekcRg/metrics/internal/agent/req"
 	"github.com/LekcRg/metrics/internal/config"
-	"github.com/LekcRg/metrics/internal/crypto"
 	"github.com/LekcRg/metrics/internal/logger"
 	"github.com/LekcRg/metrics/internal/models"
-	"github.com/LekcRg/metrics/internal/retry"
 	"github.com/LekcRg/metrics/internal/server/storage"
 	"go.uber.org/zap"
 )
 
 type Sender struct {
 	monitor   *monitoring.MonitoringStats
-	jobs      chan []byte
+	grpc      *req.GRPCClient
+	jobs      chan []models.Metrics
 	shutdown  chan bool
 	url       string
 	config    config.AgentConfig
@@ -35,7 +29,9 @@ type Sender struct {
 }
 
 func New(
-	config config.AgentConfig, monitor *monitoring.MonitoringStats,
+	config config.AgentConfig,
+	monitor *monitoring.MonitoringStats,
+	grpcCl *req.GRPCClient,
 ) *Sender {
 	baseURL := config.Addr + "/updates/"
 	if config.IsHTTPS {
@@ -44,92 +40,59 @@ func New(
 		baseURL = "http://" + baseURL
 	}
 
+	if config.IsGRPC && grpcCl == nil {
+		logger.Log.Fatal("GRPC client is nil")
+	}
+
 	return &Sender{
 		url:       baseURL,
 		config:    config,
 		monitor:   monitor,
 		countSent: 0,
-		jobs:      make(chan []byte),
+		jobs:      make(chan []models.Metrics),
 		shutdown:  make(chan bool, 1),
+		grpc:      grpcCl,
 	}
-}
-
-func (s *Sender) postRequest(ctx context.Context, argBody []byte) error {
-	var err error
-	body := argBody
-
-	if s.config.PublicKey != nil {
-		body, err = rsa.EncryptPKCS1v15(crand.Reader, s.config.PublicKey, body)
-		if err != nil {
-			return err
-		}
-	}
-
-	req, err := cgzip.GetGzippedReq(ctx, s.url, body)
-	if err != nil {
-		logger.Log.Error("Error while getting gzipped request")
-		return err
-	}
-
-	if s.config.Key != "" {
-		sha := crypto.GenerateHMAC(body, s.config.Key)
-		req.Header.Set("HashSHA256", sha)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	var resp *http.Response
-
-	err = retry.Retry(ctx, func() error {
-		resp, err = client.Do(req)
-		if err != nil {
-			return err
-		}
-
-		defer func() {
-			if resp != nil {
-				resp.Body.Close()
-			}
-		}()
-		return nil
-	})
-
-	if err != nil {
-		logger.Log.Error("Error making http request")
-		return err
-	}
-
-	if resp != nil && resp.StatusCode > 299 {
-		logger.Log.Warn("Server answered with status code: " +
-			strconv.Itoa(resp.StatusCode))
-		return fmt.Errorf("invalid status code")
-	}
-
-	s.countSent++
-	logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
-
-	return nil
 }
 
 func (s *Sender) postRequestWorker(ctx context.Context) {
 	for data := range s.jobs {
-		s.wg.Add(1)
-		err := s.postRequest(ctx, data)
-		if err != nil {
-			logger.Log.Error("Error by PostRequest", zap.Error(err))
+		select {
+		case <-ctx.Done():
+			logger.Log.Info("Parent context cancelled, stopping worker")
+			return
+		default:
 		}
-		s.wg.Done()
-	}
-}
+		s.wg.Add(1)
+		func() {
+			var cancel context.CancelFunc
+			reqCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer func() {
+				s.wg.Done()
+				cancel()
+			}()
+			var err error
+			if s.config.IsGRPC {
+				err = s.grpc.GRPCRequest(ctx, data)
+			} else {
+				reqArgs := req.RequestArgs{
+					Metrics: data,
+					Ctx:     reqCtx,
+					Config:  s.config,
+					URL:     s.url,
+				}
+				err = req.HTTPRequest(reqArgs)
+			}
 
-func (s *Sender) SendMetrics(ctx context.Context, list []models.Metrics) {
-	jsonBody, err := json.Marshal(list)
-	if err != nil {
-		logger.Log.Error("Error while generate json")
-		return
-	}
+			if err != nil {
+				logger.Log.Error("Error by postRequestWorker", zap.Error(err))
+				return
+			}
 
-	s.jobs <- jsonBody
+			s.countSent++
+			logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
+		}()
+	}
 }
 
 func (s *Sender) getRandomValue() storage.Gauge {
@@ -164,7 +127,7 @@ func (s *Sender) sendGaugeMetrics(
 		list = append(list, s.genMetricStruct("gauge", key, &sendVal, nil))
 	}
 
-	s.SendMetrics(ctx, list)
+	s.jobs <- list
 }
 
 func (s *Sender) sendPollCount(ctx context.Context) {
@@ -172,7 +135,7 @@ func (s *Sender) sendPollCount(ctx context.Context) {
 	pollCountStruct := s.genMetricStruct("counter", "PollCount", nil, &pollCountVal)
 	data := append([]models.Metrics{}, pollCountStruct)
 
-	s.SendMetrics(ctx, data)
+	s.jobs <- data
 }
 
 func (s *Sender) sendRandom(ctx context.Context) {
@@ -180,7 +143,7 @@ func (s *Sender) sendRandom(ctx context.Context) {
 	randomStruct := s.genMetricStruct("gauge", "RandomValue", &randomVal, nil)
 	data := append([]models.Metrics{}, randomStruct)
 
-	s.SendMetrics(ctx, data)
+	s.jobs <- data
 }
 
 func (s *Sender) sendAllMetrics(ctx context.Context) {
@@ -196,6 +159,14 @@ func (s *Sender) startWorkerPool(ctx context.Context) {
 	}
 }
 
+func (s *Sender) shutdownSender(wg *sync.WaitGroup) {
+	logger.Log.Info("waiting...")
+	s.wg.Wait()
+	close(s.jobs)
+	logger.Log.Info("Stop sending metrics")
+	wg.Done()
+}
+
 func (s *Sender) Start(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 
@@ -208,23 +179,18 @@ func (s *Sender) Start(ctx context.Context, wg *sync.WaitGroup) {
 		s.sendAllMetrics(ctx)
 		s.sendPollCount(ctx)
 
-		done := false
-		for !done {
+		for {
 			select {
 			case <-s.shutdown:
-				done = true
-				s.wg.Wait()
+				go s.shutdownSender(wg)
+				ticker.Stop()
+				return
 			case <-s.monitor.PollSignal:
 				s.sendPollCount(ctx)
 			case <-ticker.C:
 				s.sendAllMetrics(ctx)
 			}
 		}
-
-		close(s.jobs)
-		ticker.Stop()
-		logger.Log.Info("Stop sending metrics")
-		wg.Done()
 	}()
 }
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/LekcRg/metrics/internal/config"
+	"github.com/LekcRg/metrics/internal/ip"
 	"github.com/LekcRg/metrics/internal/server/handler/err"
 	"github.com/LekcRg/metrics/internal/server/handler/update"
 	"github.com/LekcRg/metrics/internal/server/services/metric"
@@ -13,13 +14,19 @@ import (
 func UpdateRoutes(
 	r chi.Router, metricService metric.MetricService, cfg config.ServerConfig,
 ) {
-	r.Route("/update", func(r chi.Router) {
-		r.Post("/", update.PostJSON(&metricService))
-		r.Route("/{type}", func(r chi.Router) {
-			r.Post("/", http.NotFound)
-			r.Post("/{name}", err.ErrorBadRequest)
-			r.Post("/{name}/{value}", update.Post(&metricService))
+	r.Route("/", func(r chi.Router) {
+		if cfg.TrustedSubnet != "" {
+			r.Use(ip.FilterMiddleware(cfg.TrustedNetwork))
+		}
+
+		r.Route("/update", func(r chi.Router) {
+			r.Post("/", update.PostJSON(&metricService))
+			r.Route("/{type}", func(r chi.Router) {
+				r.Post("/", http.NotFound)
+				r.Post("/{name}", err.ErrorBadRequest)
+				r.Post("/{name}/{value}", update.Post(&metricService))
+			})
 		})
+		r.Post("/updates/", update.PostMany(&metricService, cfg.Key))
 	})
-	r.Post("/updates/", update.PostMany(&metricService, cfg.Key))
 }

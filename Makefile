@@ -3,15 +3,25 @@ NO_MOCKS_COVERAGE_FILE := clean_cover.out
 PKG := ./...
 SERVER_PATH := ./cmd/server
 AGENT_PATH := ./cmd/agent
+p ?= ./...
 
 BUILD_VERSION := v0.0.20
 DATE := $(shell date -u +"%d %b %y %H:%M %z")
 COMMIT := $(shell git log --pretty=format:%Creset%s --no-merges -1)
-ldflags := -ldflags="-X 'main.buildVersion=$(BUILD_VERSION)' -X 'main.buildDate=$(DATE)' -X 'main.buildCommit=$(COMMIT)'"
+ldflags := -ldflags="\
+	-X 'github.com/LekcRg/metrics/internal/buildinfo.BuildVersion=$(BUILD_VERSION)' \
+	-X 'github.com/LekcRg/metrics/internal/buildinfo.BuildDate=$(DATE)' \
+	-X 'github.com/LekcRg/metrics/internal/buildinfo.BuildCommit=$(COMMIT)'"
 
 .PHONY: all build run test cover fmt lint mocks clean
 
 all: build
+
+run-agent:
+	go run ./cmd/agent -c=./agent.json
+
+run-server:
+	go run ./cmd/server -c=./server.json
 
 build:
 	go build -o $(AGENT_PATH)/agent $(.AGENT_PATH)
@@ -40,12 +50,11 @@ betteralign:
 	betteralign -apply -test_files ./...
 
 test:
-	go test ./... -v
+	go test $(p) -v
 
 cover:
 	go test -coverprofile=$(COVERAGE_FILE) ./...
-	grep -v "internal/mocks" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
-	# grep -Ev "internal/mocks|memstorage|postgres" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
+	grep -Ev "internal/mocks|proto" $(COVERAGE_FILE) > $(NO_MOCKS_COVERAGE_FILE)
 	go tool cover -func=$(NO_MOCKS_COVERAGE_FILE)
 
 cover-ugly:
@@ -53,5 +62,5 @@ cover-ugly:
 	go tool cover -func=$(COVERAGE_FILE)
 
 cover-html:
-	go test -coverprofile=$(COVERAGE_FILE) ./...
+	go test -coverprofile=$(COVERAGE_FILE) $(p)
 	go tool cover -html=$(COVERAGE_FILE)
