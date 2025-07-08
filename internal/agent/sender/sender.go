@@ -25,6 +25,7 @@ type Sender struct {
 	url       string
 	config    config.AgentConfig
 	wg        sync.WaitGroup
+	mu        sync.Mutex
 	countSent int
 }
 
@@ -89,8 +90,10 @@ func (s *Sender) postRequestWorker(ctx context.Context) {
 				return
 			}
 
+			s.mu.Lock()
 			s.countSent++
 			logger.Log.Info("Request sent. Total: " + strconv.Itoa(s.countSent) + " requests")
+			s.mu.Unlock()
 		}()
 	}
 }
