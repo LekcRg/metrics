@@ -58,20 +58,18 @@ func New(
 
 func (s *Sender) postRequestWorker(ctx context.Context) {
 	for data := range s.jobs {
+		s.wg.Add(1)
+		defer s.wg.Done()
 		select {
 		case <-ctx.Done():
 			logger.Log.Info("Parent context cancelled, stopping worker")
 			return
 		default:
 		}
-		s.wg.Add(1)
 		func() {
 			var cancel context.CancelFunc
 			reqCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer func() {
-				s.wg.Done()
-				cancel()
-			}()
+			defer cancel()
 			var err error
 			if s.config.IsGRPC {
 				err = s.grpc.GRPCRequest(ctx, data)
@@ -164,8 +162,8 @@ func (s *Sender) startWorkerPool(ctx context.Context) {
 
 func (s *Sender) shutdownSender(wg *sync.WaitGroup) {
 	logger.Log.Info("waiting...")
-	s.wg.Wait()
 	close(s.jobs)
+	s.wg.Wait()
 	logger.Log.Info("Stop sending metrics")
 	wg.Done()
 }
@@ -185,8 +183,8 @@ func (s *Sender) Start(ctx context.Context, wg *sync.WaitGroup) {
 		for {
 			select {
 			case <-s.shutdown:
-				go s.shutdownSender(wg)
 				ticker.Stop()
+				s.shutdownSender(wg)
 				return
 			case <-s.monitor.PollSignal:
 				s.sendPollCount(ctx)

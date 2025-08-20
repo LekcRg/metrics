@@ -68,16 +68,14 @@ func TestSender(t *testing.T) {
 	mon.Shutdown()
 
 	mu.Lock()
-	assert.Greater(t, reqCount, 5, "request lower than 6")
+	assert.Greater(t, reqCount, 5, "request lower than 5")
 	mu.Unlock()
 
 	needMetric := []string{"PollCount", "RandomValue", "Alloc", "TotalMemory"}
 	countFound := 0
 	for _, m := range received {
 		if slices.Contains(needMetric, m.ID) {
-			mu.Lock()
 			countFound++
-			mu.Unlock()
 		}
 	}
 	assert.Greater(t, countFound, len(needMetric)-1)
